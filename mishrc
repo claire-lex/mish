@@ -1,0 +1,12 @@
+# Mish RC file
+# Lex @ https://github.com/claire-lex/mish - 2022
+#
+# Mish: Shell environment for penetration tests.
+# Source this file in your terminal's RC file (source mishrc)
+
+###############################################################################
+# CONFIG                                                                      #
+###############################################################################
+
+MISH_CONFIG_FILE=".mishconfig"
+MISH_CONFIG_PATH=$HOME/$MISH_CONFIG_FILE
