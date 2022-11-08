@@ -2,11 +2,122 @@
 # Lex @ https://github.com/claire-lex/mish - 2022
 #
 # Mish: Shell environment for penetration tests.
-# Source this file in your terminal's RC file (source mishrc)
+# Source this file in your terminal's RC file: . mishrc
+# Then, enable / disable and operate with: mish [command] (-h for help)
 
-###############################################################################
-# CONFIG                                                                      #
-###############################################################################
+################################################################################
+# CONFIG                                                                       #
+################################################################################
 
+# Usage
+MISH_ALIAS="mish"
+COMMAND_LIST="start status stop"
+HELP="Usage: $MISH_ALIAS [$COMMAND_LIST]"
+
+# Base file
+MISH_RC_FILE="mishrc"
+MISH_RC_PATH="$(realpath $MISH_RC_FILE)"
+
+# Configuration file
 MISH_CONFIG_FILE=".mishconfig"
 MISH_CONFIG_PATH=$HOME/$MISH_CONFIG_FILE
+
+# Constants
+MISH_ENV_TITLE="name"
+MISH_STATUS_TITLE="status"
+
+# Read data from configuration file if it exists
+if [[ -f $MISH_CONFIG_PATH ]]; then
+    while IFS= read -r line; do
+	if [[ $line == "$MISH_ENV_TITLE="* ]]; then
+            MISH_ENV="${line#*=}"
+	elif [[ $line == "$MISH_STATUS_TITLE="* ]]; then
+            MISH_STATUS="${line#*=}"
+	fi
+    done < $MISH_CONFIG_PATH
+else
+    # Default values
+    MISH_ENV=""
+    MISH_STATUS="off"
+fi
+
+###############################################################################
+# SET UP ENVIRONMENT                                                          #
+###############################################################################
+
+# Add completion to the base command $MISH_ALIAS
+complete -W "$COMMAND_LIST" $MISH_ALIAS
+
+# Set up an alias to refer to this file with alias $MISH_ALIAS
+alias $MISH_ALIAS=$MISH_RC_PATH
+
+################################################################################
+# FUNCTIONS                                                                    #
+################################################################################
+
+function help {
+    echo "
+${HELP}
+
+ commands:
+start	Enable mish environment
+status	Get information about mish's current status
+stop	Disable mish environment
+"
+}
+
+function start {
+    echo -n "Enter project name [$MISH_ENV]: "
+    read new_env
+    if [[ $new_env != "" ]]; then
+	MISH_ENV=$new_env
+    fi
+    # This is dirty but so far we just rewrite the whole config file.
+    echo "$MISH_ENV_TITLE=$MISH_ENV" > $MISH_CONFIG_PATH
+    echo "$MISH_STATUS_TITLE=on" >> $MISH_CONFIG_PATH
+    MISH_STATUS="on"
+}
+
+function status {
+    echo "Environment name:" $MISH_ENV
+    echo "Status:" $MISH_STATUS
+}
+
+function stop {
+    # This is dirty but so far we just rewrite the whole config file.
+    echo "$MISH_ENV_TITLE=$MISH_ENV" > $MISH_CONFIG_PATH
+    echo "$MISH_STATUS_TITLE=off" >> $MISH_CONFIG_PATH
+    MISH_STATUS="off"
+#    echo "Warning: Script keeps on logging as long as you don't exit."
+}
+
+################################################################################
+# START                                                                        #
+################################################################################
+
+# Reading arguments
+while [[ $# -gt 0 ]]; do
+    case "$1" in
+	start|on)
+	    start
+	    shift
+	    ;;
+	stop|off)
+	    stop
+	    shift
+	    ;;
+	status)
+	    status
+	    shift
+	    ;;
+	help|-h)
+	    help
+	    exit
+	    ;;
+	*)
+	    echo "Error: Unknown argument."
+	    echo "$HELP"
+	    exit
+	    ;;
+    esac
+done
