@@ -1,0 +1,38 @@
+#!/bin/bash
+# Mish i3 script
+# Lex @ https://github.com/claire-lex/mish - 2022
+#
+# Mish: Shell environment for penetration tests.
+# i3block script displaying to know if an environment is enabled, and if so,
+# which one (displays the name of current env is active)
+#
+# 1. Copy this file to i3blocks' command path.
+#    For instance, if your .i3blocks.conf file contains the following line:
+#    command=/usr/share/i3blocks/$BLOCK_NAME
+#    Then the file should be copied to: /usr/share/i3blocks
+# 2. Add this to .i3blocks.conf (you can change color & refresh interval):
+#    [mishi3]
+#    interval=30
+#    color=#FF0000
+
+
+NAME=""
+STATUS="off"
+
+CURRENT=$(cat $HOME/.mishconfig)
+if [[ -z $CURRENT ]]; then
+    exit
+fi
+
+for line in $CURRENT
+do
+    if [[ $line = name=* ]]; then
+	NAME=${line#*=}
+    elif [[ $line = status=* ]]; then
+	STATUS=${line#*=}
+    fi
+done
+
+if [[ ! -z $NAME ]] && [[ $STATUS == "on" ]] ; then
+    echo -e "$NAME"
+fi
