@@ -74,6 +74,12 @@ stop	Disable mish environment
 "
 }
 
+function write_config {
+    echo "$MISH_ENV_TITLE=$MISH_ENV" > $MISH_CONFIG_PATH
+    echo "$MISH_LOGPATH_TITLE=$MISH_LOGPATH" >> $MISH_CONFIG_PATH
+    echo "$MISH_STATUS_TITLE=$MISH_STATUS" >> $MISH_CONFIG_PATH
+}
+
 function start {
     echo -n "Enter project name [$MISH_ENV]: "
     read new_env
@@ -94,11 +100,8 @@ function start {
 	    success=0
 	fi
     done
-    # This is dirty but so far we just rewrite the whole config file.
-    echo "$MISH_ENV_TITLE=$MISH_ENV" > $MISH_CONFIG_PATH
-    echo "$MISH_LOGPATH_TITLE=$MISH_LOGPATH" >> $MISH_CONFIG_PATH
-    echo "$MISH_STATUS_TITLE=on" >> $MISH_CONFIG_PATH
     MISH_STATUS="on"
+    write_config
 }
 
 function status {
@@ -108,11 +111,8 @@ function status {
 }
 
 function stop {
-    # This is dirty but so far we just rewrite the whole config file.
-    echo "$MISH_ENV_TITLE=$MISH_ENV" > $MISH_CONFIG_PATH
-    echo "$MISH_LOGPATH_TITLE=$MISH_LOGPATH" >> $MISH_CONFIG_PATH
-    echo "$MISH_STATUS_TITLE=off" >> $MISH_CONFIG_PATH
     MISH_STATUS="off"
+    write_config
 #    echo "Warning: Script keeps on logging as long as you don't exit."
 }
 
