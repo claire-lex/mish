@@ -14,12 +14,15 @@
 #    [mishi3]
 #    interval=30
 #    color=#FF0000
-
+#
+# The block refreshes every [interval] seconds and therefore may not update
+# immediately when starting and stopping the mish environment.
 
 NAME=""
 STATUS="off"
+MISH_CONFIG_FILE=".mishconfig"
 
-CURRENT=$(cat $HOME/.mishconfig)
+CURRENT=$(cat $HOME/$MISH_CONFIG_FILE)
 if [[ -z $CURRENT ]]; then
     exit
 fi

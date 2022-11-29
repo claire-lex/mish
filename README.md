@@ -34,10 +34,48 @@ mish start
 mish stop
 ```
 
+Behavior
+--------
+
+When mish is enabled, there are a few tasks running in background:
+
+**Display:**
+- TODO
+
+**Logging:**
+- TODO
+
+
+Commands
+--------
+
+TODO
+
+Use i3blocks addon
+------------------
+
+Copy `mishi3` to your i3blocks' command path:
+
+```
+cp mishi3 /usr/share/i3blocks
+```
+
+> For instance, if your `.i3blocks.conf` file contains the following line:
+  `command=/usr/share/i3blocks/$BLOCK_NAME`, then the file should be copied to:
+  `/usr/share/i3blocks`
+
+Add this to .i3blocks.conf (you can change the color & refresh interval):
+
+```
+[mishi3]
+interval=30
+color=#FF0000
+```
+
 TODO
 ----
 
-* [ ] Mish commands' autocompletion with `complete`
+* [X] Mish commands' autocompletion with `complete`
 * [ ] Network discovery with `nmap`
 * [ ] Mish as a **Oh My Zsh** plugin
 * [ ] Store findings in a DB

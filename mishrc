@@ -1,3 +1,4 @@
+#!/bin/bash
 # Mish RC file
 # Lex @ https://github.com/claire-lex/mish - 2022
 #
@@ -11,7 +12,7 @@
 
 # Usage
 MISH_ALIAS="mish"
-COMMAND_LIST="start status stop"
+COMMAND_LIST="help start status stop"
 HELP="Usage: $MISH_ALIAS [$COMMAND_LIST]"
 
 # Base file
@@ -22,8 +23,12 @@ MISH_RC_PATH="$(realpath $MISH_RC_FILE)"
 MISH_CONFIG_FILE=".mishconfig"
 MISH_CONFIG_PATH=$HOME/$MISH_CONFIG_FILE
 
+# Log configuration
+MISH_LOGPATH="$HOME/mish"
+
 # Constants
 MISH_ENV_TITLE="name"
+MISH_LOGPATH_TITLE="logpath"
 MISH_STATUS_TITLE="status"
 
 # Read data from configuration file if it exists
@@ -31,6 +36,8 @@ if [[ -f $MISH_CONFIG_PATH ]]; then
     while IFS= read -r line; do
 	if [[ $line == "$MISH_ENV_TITLE="* ]]; then
             MISH_ENV="${line#*=}"
+	elif [[ $line == "$MISH_LOGPATH_TITLE="* ]]; then
+            MISH_LOGPATH="${line#*=}"
 	elif [[ $line == "$MISH_STATUS_TITLE="* ]]; then
             MISH_STATUS="${line#*=}"
 	fi
@@ -60,6 +67,7 @@ function help {
 ${HELP}
 
  commands:
+help	Display this help
 start	Enable mish environment
 status	Get information about mish's current status
 stop	Disable mish environment
@@ -72,20 +80,37 @@ function start {
     if [[ $new_env != "" ]]; then
 	MISH_ENV=$new_env
     fi
+    success=1
+    for (( ; $success != 0 ; )); do
+	echo -n "Enter log path [$MISH_LOGPATH]: "
+	read new_logpath
+	if [[ $new_logpath == "" ]]; then
+	    new_logpath=$MISH_LOGPATH
+	fi
+	# Create directory if we can, mkdir takes care of the checks
+	mkdir -p $new_logpath
+	if [[ $? == 0 ]]; then # mkdir succeeded
+	    MISH_LOGPATH=$(realpath $new_logpath)
+	    success=0
+	fi
+    done
     # This is dirty but so far we just rewrite the whole config file.
     echo "$MISH_ENV_TITLE=$MISH_ENV" > $MISH_CONFIG_PATH
+    echo "$MISH_LOGPATH_TITLE=$MISH_LOGPATH" >> $MISH_CONFIG_PATH
     echo "$MISH_STATUS_TITLE=on" >> $MISH_CONFIG_PATH
     MISH_STATUS="on"
 }
 
 function status {
     echo "Environment name:" $MISH_ENV
+    echo "Log path:" $MISH_LOGPATH
     echo "Status:" $MISH_STATUS
 }
 
 function stop {
     # This is dirty but so far we just rewrite the whole config file.
     echo "$MISH_ENV_TITLE=$MISH_ENV" > $MISH_CONFIG_PATH
+    echo "$MISH_LOGPATH_TITLE=$MISH_LOGPATH" >> $MISH_CONFIG_PATH
     echo "$MISH_STATUS_TITLE=off" >> $MISH_CONFIG_PATH
     MISH_STATUS="off"
 #    echo "Warning: Script keeps on logging as long as you don't exit."
