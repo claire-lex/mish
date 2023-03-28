@@ -6,7 +6,7 @@
 
 MISH_ALIAS="mish"
 THREAD_LIMIT=256 # Arbitrary, for additional protection. Feel free to change it.
-SUBCOMMAND_LIST="ping host"
+NETCOMMAND_LIST="ping host"
 
 # Default values for arguments
 ARG_COMMAND=""
@@ -16,9 +16,9 @@ ARG_NOFILE=false # Set to true with -n: prevents from writing results to a file.
 ARG_OUTPUTFILE="" # Change with -o [filename]
 
 # Messages
-HELP="Usage: $MISH_ALIAS [$SUBCOMMAND_LIST] [-n -o [outfile] -t [threadnumber]]"
+HELP="Usage: $MISH_ALIAS [$NETCOMMAND_LIST] [-n -o [outfile] -t [threadnumber]]"
 
-ERROR_COMMAND="Command not found (available: $SUBCOMMAND_LIST)."
+ERROR_COMMAND="Command not found (available: $NETCOMMAND_LIST)."
 ERROR_THREAD="Invalid value for -t (must be between 0 and $THREAD_LIMIT)."
 ERROR_IPRANGE="The list of IP addresses is empty."
 
@@ -58,14 +58,14 @@ function help {
 ping    Run ping on a range
 host	Run host on a range
 
- options to subcommands:
+ options to netcommands:
 -n 	Do not store results to a file
 -o name Change the name of the output file (default: <range>.<date>.<cmd>.mish): 
 -t num  Number of threads to use (default is $ARG_MAXTHREAD)
 
 $HELP
-These subcommands run a basic commands on a range (multithreaded) and output the
-results to a file (by default).
+These netcommands run a basic network discovery commands on a range
+(multithreaded) and output the results to a file (by default).
 
 "
 }
@@ -102,7 +102,7 @@ fi
 if [[ $1 == "help" ]]; then
     help
     exit
-elif echo "$SUBCOMMAND_LIST" | grep -qw $1; then
+elif echo "$NETCOMMAND_LIST" | grep -qw $1; then
     ARG_COMMAND="$1"
     shift
 else
@@ -139,6 +139,7 @@ while [[ $# -gt 0 ]]; do
 		ARG_IPRANGE="$1"
 	    else
 		ERROR "Error: Unknown argument: $1."
+		exit
 	    fi
 	    shift
 	    ;;

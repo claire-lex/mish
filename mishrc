@@ -13,14 +13,18 @@
 # Usage
 MISH_ALIAS="mish"
 COMMAND_LIST="help start status stop"
-SUBCOMMAND_LIST="ping host"
-HELP="Usage: $MISH_ALIAS [$COMMAND_LIST $SUBCOMMAND_LIST]"
+NETCOMMAND_LIST="ping host"
+HELP="Usage: $MISH_ALIAS [$COMMAND_LIST $NETCOMMAND_LIST]"
+
+# Variables for enabled nvironments (will be updated with config)
+MISH_CURRENT_PATH=""
+MISH_CURRENT_HISTORY=""
 
 # Base file
 MISH_RC_FILE="mishrc"
 MISH_RC_PATH="$(realpath $MISH_RC_FILE)"
-MISH_CMD_FILE="mishcmd"
-MISH_CMD_PATH="$(realpath $MISH_CMD_FILE)"
+MISH_NET_FILE="mishnet"
+MISH_NET_PATH="$(realpath $MISH_NET_FILE)"
 
 # Configuration file
 MISH_CONFIG_FILE=".mishconfig"
@@ -28,6 +32,8 @@ MISH_CONFIG_PATH=$HOME/$MISH_CONFIG_FILE
 
 # Log configuration
 MISH_LOGPATH="$HOME/mish"
+MISH_LOGPATH_NAME="log"
+MISH_CMDPATH_NAME="traces"
 
 # Constants
 MISH_ENV_TITLE="name"
@@ -56,7 +62,7 @@ fi
 ###############################################################################
 
 # Add completion to the base command $MISH_ALIAS
-complete -W "$COMMAND_LIST $SUBCOMMAND_LIST" $MISH_ALIAS
+complete -W "$COMMAND_LIST $NETCOMMAND_LIST" $MISH_ALIAS
 
 # Set up an alias to refer to this file with alias $MISH_ALIAS
 alias $MISH_ALIAS=$MISH_RC_PATH
@@ -64,6 +70,10 @@ alias $MISH_ALIAS=$MISH_RC_PATH
 ################################################################################
 # FUNCTIONS                                                                    #
 ################################################################################
+
+function ECHO {
+    echo "[MISH] $*"
+}
 
 function help {
     echo "
@@ -75,9 +85,21 @@ start	Enable mish environment
 status	Get information about mish's current status
 stop	Disable mish environment
 
- subcommands (call to mishcmd):
-$($MISH_CMD_PATH help)
+ netcommands (call to mishnet):
+$($MISH_NET_PATH help)
 "
+}
+
+function update_config {
+    MISH_CURRENT_LOGPATH="$MISH_LOGPATH/$MISH_ENV/$MISH_LOGPATH_NAME"
+    MISH_CURRENT_CMDPATH="$MISH_LOGPATH/$MISH_ENV/$MISH_CMDPATH_NAME"
+    MISH_CURRENT_HISTORY="$MISH_CURRENT_LOGPATH/$MISH_ENV.history"
+}
+
+function print_config {
+    ECHO "Terminal logs are stored to: $MISH_CURRENT_LOGPATH"
+    ECHO "Command results are stored to: $MISH_CURRENT_CMDPATH"
+    ECHO "History file is: $MISH_CURRENT_HISTORY"
 }
 
 function write_config {
@@ -107,13 +129,16 @@ function start {
 	fi
     done
     MISH_STATUS="on"
+    update_config
     write_config
+
+    ECHO "Starting environment for $MISH_ENV."
 }
 
 function status {
-    echo "Environment name:" $MISH_ENV
-    echo "Log path:" $MISH_LOGPATH
-    echo "Status:" $MISH_STATUS
+    ECHO "Environment name:" $MISH_ENV
+    ECHO "Log path:" $MISH_LOGPATH
+    ECHO "Status:" $MISH_STATUS
 }
 
 function stop {
@@ -146,13 +171,28 @@ while [[ $# -gt 0 ]]; do
 	    exit
 	    ;;
 	*)
-	    if echo "$SUBCOMMAND_LIST" | grep -qw $1; then
-		$MISH_CMD_PATH $*
+	    if echo "$NETCOMMAND_LIST" | grep -qw $1; then
+		$MISH_NET_PATH $*
 	    else
-		echo "Error: Unknown argument."
+		ECHO "Error: Unknown argument."
 		echo "$HELP"
 	    fi
 	    exit
 	    ;;
     esac
 done
+
+################################################################################
+# ENABLED PENETRATION TEST ENVIRONMENT                                         #
+################################################################################
+
+if [[ $MISH_STATUS == "on" ]]; then
+
+    echo "********************************************************************"
+    echo "MISH ENVIRONMENT IS ENABLED ($MISH_ENV)"
+    print_config
+    MISH_CURRENT_SCRIPT="$MISH_CURRENT_LOGPATH/$MISH_ENV.`date +%Y%m%d-%H%M%S`.script"
+    ECHO "Created new script file: $MISH_CURRENT_SCRIPT"
+    echo "********************************************************************"
+
+fi

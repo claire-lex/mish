@@ -1,27 +1,38 @@
 MISH
 ====
 
-Mish is a shell environment for penetration tests. Source `.mishrc` during an
-assessment to load logging capabilities, built-in and user-defined aliases and
-other useful features.
+Mish is a basic shell environment for penetration tests. Source `.mishrc` during
+an assessment to load:
+- logging capabilities
+- basic network discovery commands
+- built-in and user-defined aliases
 
 TL;DR
 -----
 
-**1. Install requirements:** `complete` `net` `nmap` `script`.
+**1. Check requirements:** `complete` `net` `nmap` `script`. All of them are
+     usually already installed.
 
-**2. Add this line to source .mishrc in your usual terminal RC or alias file**
-     (`.bash_aliases`, `.zshrc`, ...):
+**2. Add this line in your usual terminal RC or alias file (`.bash_aliases`,
+     `.zshrc`, ...) to automatically load mish, or directly run:
 
 ```
-. path/to/mishrc
+source path/to/mishrc
 ```
+
+> Mish does nothing by default, it needs to be enabled (`start`). However, if it
+  is sourced, network discovery functions (netcommands) can be used even when
+  the environment is off.
 
 **3. Initialize and start an assessment environment:**
 
 ```
 mish start
 ```
+
+You will be asked for the name of the environment to load. We recommend to have
+one environment by assessment, so the name can be something related to your
+current customer.
 
 > Mish relies on a configuration file (`.mishconfig`) to know if the environment
    is active and on which scope. Edit it manually or with `mish config`.
