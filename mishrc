@@ -20,11 +20,12 @@ HELP="Usage: $MISH_ALIAS [$COMMAND_LIST $NETCOMMAND_LIST]"
 MISH_CURRENT_PATH=""
 MISH_CURRENT_HISTORY=""
 
-# Base file
+# Base files
+MISH_DIR="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)"
 MISH_RC_FILE="mishrc"
-MISH_RC_PATH="$(realpath $MISH_RC_FILE)"
+MISH_RC_PATH="$MISH_DIR/$MISH_RC_FILE"
 MISH_NET_FILE="mishnet"
-MISH_NET_PATH="$(realpath $MISH_NET_FILE)"
+MISH_NET_PATH="$MISH_DIR/$MISH_NET_FILE"
 
 # Configuration file
 MISH_CONFIG_FILE=".mishconfig"
@@ -94,6 +95,7 @@ function update_config {
     MISH_CURRENT_LOGPATH="$MISH_LOGPATH/$MISH_ENV/$MISH_LOGPATH_NAME"
     MISH_CURRENT_CMDPATH="$MISH_LOGPATH/$MISH_ENV/$MISH_CMDPATH_NAME"
     MISH_CURRENT_HISTORY="$MISH_CURRENT_LOGPATH/$MISH_ENV.history"
+    mkdir -p $MISH_CURRENT_LOGPATH $MISH_CURRENT_CMDPATH
 }
 
 function print_config {
@@ -129,7 +131,6 @@ function start {
 	fi
     done
     MISH_STATUS="on"
-    update_config
     write_config
 
     ECHO "Starting environment for $MISH_ENV."
@@ -144,7 +145,7 @@ function status {
 function stop {
     MISH_STATUS="off"
     write_config
-#    echo "Warning: Script keeps on logging as long as you don't exit."
+    echo "Warning: Script keeps on logging as long as you don't exit."
 }
 
 ################################################################################
@@ -186,13 +187,33 @@ done
 # ENABLED PENETRATION TEST ENVIRONMENT                                         #
 ################################################################################
 
+MISH_PROMPT_COLOR='\[\e[41;1;37m\]'
+OFF="\[\e[00m\]"
+
+
 if [[ $MISH_STATUS == "on" ]]; then
 
-    echo "********************************************************************"
-    echo "MISH ENVIRONMENT IS ENABLED ($MISH_ENV)"
-    print_config
-    MISH_CURRENT_SCRIPT="$MISH_CURRENT_LOGPATH/$MISH_ENV.`date +%Y%m%d-%H%M%S`.script"
-    ECHO "Created new script file: $MISH_CURRENT_SCRIPT"
-    echo "********************************************************************"
+    update_config
+    
+    # Initiate command logging 
+    PROMPT_COMMAND="date +%Y-%m-%d-%H:%M:%S >> $MISH_CURRENT_HISTORY ; history -a ; history | tail -n1 | cut -b8- >> $MISH_CURRENT_HISTORY"
+    export PROMPT_COMMAND
 
+    # Initiate special prompt
+    PS1="$MISH_PROMPT_COLOR $MISH_ENV $OFF$PS1"
+    
+    # We need to test that the parent shell is not script (which calls
+    # .bash_aliases too) to avoid an endless loop.
+    term="$(ps -ocommand= -p $PPID | awk '{print $1}')"
+    if [[ $term != 'script' ]]; then
+	MISH_CURRENT_SCRIPT="$MISH_CURRENT_LOGPATH/$MISH_ENV.`date +%Y%m%d-%H%M%S`.script"
+	echo "********************************************************************"
+	echo "MISH ENVIRONMENT IS ENABLED ($MISH_ENV)"
+	print_config
+	ECHO "Created new script file: $MISH_CURRENT_SCRIPT"
+	echo "********************************************************************"
+	# TODO: Does not work yet :(
+	# script -f $MISH_CURRENT_SCRIPT
+    fi
+    
 fi
