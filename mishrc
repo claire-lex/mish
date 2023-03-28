@@ -13,11 +13,14 @@
 # Usage
 MISH_ALIAS="mish"
 COMMAND_LIST="help start status stop"
-HELP="Usage: $MISH_ALIAS [$COMMAND_LIST]"
+SUBCOMMAND_LIST="ping host"
+HELP="Usage: $MISH_ALIAS [$COMMAND_LIST $SUBCOMMAND_LIST]"
 
 # Base file
 MISH_RC_FILE="mishrc"
 MISH_RC_PATH="$(realpath $MISH_RC_FILE)"
+MISH_CMD_FILE="mishcmd"
+MISH_CMD_PATH="$(realpath $MISH_CMD_FILE)"
 
 # Configuration file
 MISH_CONFIG_FILE=".mishconfig"
@@ -53,7 +56,7 @@ fi
 ###############################################################################
 
 # Add completion to the base command $MISH_ALIAS
-complete -W "$COMMAND_LIST" $MISH_ALIAS
+complete -W "$COMMAND_LIST $SUBCOMMAND_LIST" $MISH_ALIAS
 
 # Set up an alias to refer to this file with alias $MISH_ALIAS
 alias $MISH_ALIAS=$MISH_RC_PATH
@@ -71,6 +74,9 @@ help	Display this help
 start	Enable mish environment
 status	Get information about mish's current status
 stop	Disable mish environment
+
+ subcommands (call to mishcmd):
+$($MISH_CMD_PATH help)
 "
 }
 
@@ -140,8 +146,12 @@ while [[ $# -gt 0 ]]; do
 	    exit
 	    ;;
 	*)
-	    echo "Error: Unknown argument."
-	    echo "$HELP"
+	    if echo "$SUBCOMMAND_LIST" | grep -qw $1; then
+		$MISH_CMD_PATH $*
+	    else
+		echo "Error: Unknown argument."
+		echo "$HELP"
+	    fi
 	    exit
 	    ;;
     esac
