@@ -190,14 +190,12 @@ done
 MISH_PROMPT_COLOR='\[\e[41;1;37m\]'
 OFF="\[\e[00m\]"
 
-
 if [[ $MISH_STATUS == "on" ]]; then
 
     update_config
     
     # Initiate command logging 
     PROMPT_COMMAND="date +%Y-%m-%d-%H:%M:%S >> $MISH_CURRENT_HISTORY ; history -a ; history | tail -n1 | cut -b8- >> $MISH_CURRENT_HISTORY"
-    export PROMPT_COMMAND
 
     # Initiate special prompt
     PS1="$MISH_PROMPT_COLOR $MISH_ENV $OFF$PS1"
@@ -212,8 +210,9 @@ if [[ $MISH_STATUS == "on" ]]; then
 	print_config
 	ECHO "Created new script file: $MISH_CURRENT_SCRIPT"
 	echo "********************************************************************"
-	# TODO: Does not work yet :(
-	# script -f $MISH_CURRENT_SCRIPT
+	# Check if script file exist because we don't want to overwrite it
+	if [[ ! -f $MISH_CURRENT_SCRIPT ]]; then
+	    script -f $MISH_CURRENT_SCRIPT
+	fi
     fi
-    
 fi
