@@ -15,6 +15,9 @@ ARG_MAXTHREAD=256 # Default value, change with -t [number]
 ARG_NOFILE=false # Set to true with -n: prevents from writing results to a file.
 ARG_OUTPUTFILE="" # Change with -o [filename]
 
+# Environment variable to use
+ENV_MISHCMD=$MISHCMD
+
 # Messages
 HELP="Usage: $MISH_ALIAS [$NETCOMMAND_LIST] [-n -o [outfile] -t [threadnumber]]"
 
@@ -171,8 +174,13 @@ if ! $ARG_NOFILE; then
     if [[ -z $ARG_OUTPUTFILE ]]; then
 	outrange=$(echo "$ARG_IPRANGE" | sed -r 's/[/]+/_/g')
 	ARG_OUTPUTFILE="$outrange.`date +%Y%m%d-%H%M%S`.$ARG_COMMAND.$MISH_ALIAS"
-	touch "$ARG_OUTPUTFILE"
     fi
+    # Output files are stored to the env's current traces dir if enabled.
+    # If not, files are stored on the current working directory.
+    if [[ "$ENV_MISHCMD" != "" ]]; then
+	ARG_OUTPUTFILE="$ENV_MISHCMD/$ARG_OUTPUTFILE"
+    fi
+    touch "$ARG_OUTPUTFILE"
 fi
 
 #--- Loop over the IP range and spawn background tasks up to $ARG_MAXTHREAD ---#

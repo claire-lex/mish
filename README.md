@@ -112,7 +112,9 @@ These netcommands run a basic network discovery commands on a range
 ```
 
 > Unless specified with option `-n`, the result of every command that is printed
-  to stdout is also stored in a file in the `traces` directory.
+  to stdout is also stored in a file. This file is stored to the env's `traces`
+  directory if the environment is on. Otherwise, it will be stored to the
+  current working directory.
 
 ### Network discovery basic functions (netcommands)
 
@@ -171,5 +173,6 @@ TODO
 * [ ] Be able to change more things from the configuration file (e.g.: folder
   names, prompt style, enable and disable things)
 * [ ] `mish config`
+* [ ] Flameshot config file
 * [ ] Checklist system?
 * [ ] Mish as a **Oh My Zsh** plugin?

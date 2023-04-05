@@ -32,13 +32,13 @@ MISH_CONFIG_FILE=".mishconfig"
 MISH_CONFIG_PATH=$HOME/$MISH_CONFIG_FILE
 
 # Log configuration
-MISH_LOGPATH="$HOME/mish"
+MISH_PATH="$HOME/mish"
 MISH_LOGPATH_NAME="log"
 MISH_CMDPATH_NAME="traces"
 
 # Constants
 MISH_ENV_TITLE="name"
-MISH_LOGPATH_TITLE="logpath"
+MISH_PATH_TITLE="path"
 MISH_STATUS_TITLE="status"
 
 # Read data from configuration file if it exists
@@ -46,8 +46,8 @@ if [[ -f $MISH_CONFIG_PATH ]]; then
     while IFS= read -r line; do
 	if [[ $line == "$MISH_ENV_TITLE="* ]]; then
             MISH_ENV="${line#*=}"
-	elif [[ $line == "$MISH_LOGPATH_TITLE="* ]]; then
-            MISH_LOGPATH="${line#*=}"
+	elif [[ $line == "$MISH_PATH_TITLE="* ]]; then
+            MISH_PATH="${line#*=}"
 	elif [[ $line == "$MISH_STATUS_TITLE="* ]]; then
             MISH_STATUS="${line#*=}"
 	fi
@@ -92,8 +92,8 @@ $($MISH_NET_PATH help)
 }
 
 function update_config {
-    MISH_CURRENT_LOGPATH="$MISH_LOGPATH/$MISH_ENV/$MISH_LOGPATH_NAME"
-    MISH_CURRENT_CMDPATH="$MISH_LOGPATH/$MISH_ENV/$MISH_CMDPATH_NAME"
+    MISH_CURRENT_LOGPATH="$MISH_PATH/$MISH_ENV/$MISH_LOGPATH_NAME"
+    MISH_CURRENT_CMDPATH="$MISH_PATH/$MISH_ENV/$MISH_CMDPATH_NAME"
     MISH_CURRENT_HISTORY="$MISH_CURRENT_LOGPATH/$MISH_ENV.history"
     mkdir -p $MISH_CURRENT_LOGPATH $MISH_CURRENT_CMDPATH
 }
@@ -106,7 +106,7 @@ function print_config {
 
 function write_config {
     echo "$MISH_ENV_TITLE=$MISH_ENV" > $MISH_CONFIG_PATH
-    echo "$MISH_LOGPATH_TITLE=$MISH_LOGPATH" >> $MISH_CONFIG_PATH
+    echo "$MISH_PATH_TITLE=$MISH_PATH" >> $MISH_CONFIG_PATH
     echo "$MISH_STATUS_TITLE=$MISH_STATUS" >> $MISH_CONFIG_PATH
 }
 
@@ -118,15 +118,15 @@ function start {
     fi
     success=1
     for (( ; $success != 0 ; )); do
-	echo -n "Enter log path [$MISH_LOGPATH]: "
-	read new_logpath
-	if [[ $new_logpath == "" ]]; then
-	    new_logpath=$MISH_LOGPATH
+	echo -n "Enter path for mish files [$MISH_PATH]: "
+	read new_path
+	if [[ $new_path == "" ]]; then
+	    new_path=$MISH_PATH
 	fi
 	# Create directory if we can, mkdir takes care of the checks
-	mkdir -p $new_logpath
+	mkdir -p $new_path
 	if [[ $? == 0 ]]; then # mkdir succeeded
-	    MISH_LOGPATH=$(realpath $new_logpath)
+	    MISH_PATH=$(realpath $new_path)
 	    success=0
 	fi
     done
@@ -138,8 +138,9 @@ function start {
 
 function status {
     ECHO "Environment name:" $MISH_ENV
-    ECHO "Log path:" $MISH_LOGPATH
+    ECHO "Path:" $MISH_PATH/$MISH_ENV
     ECHO "Status:" $MISH_STATUS
+    exit
 }
 
 function stop {
@@ -204,6 +205,7 @@ if [[ $MISH_STATUS == "on" ]]; then
     # .bash_aliases too) to avoid an endless loop.
     term="$(ps -ocommand= -p $PPID | awk '{print $1}')"
     if [[ $term != 'script' ]]; then
+	export MISHCMD=$MISH_CURRENT_CMDPATH
 	MISH_CURRENT_SCRIPT="$MISH_CURRENT_LOGPATH/$MISH_ENV.`date +%Y%m%d-%H%M%S`.script"
 	echo "********************************************************************"
 	echo "MISH ENVIRONMENT IS ENABLED ($MISH_ENV)"
@@ -212,7 +214,9 @@ if [[ $MISH_STATUS == "on" ]]; then
 	echo "********************************************************************"
 	# Check if script file exist because we don't want to overwrite it
 	if [[ ! -f $MISH_CURRENT_SCRIPT ]]; then
-	    script -f $MISH_CURRENT_SCRIPT
+	    script -qf $MISH_CURRENT_SCRIPT
 	fi
     fi
+    # Move to the environment's directory:
+    cd $MISH_PATH/$MISH_ENV
 fi
