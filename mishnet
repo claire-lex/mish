@@ -1,4 +1,12 @@
 #!/bin/bash
+# Mish RC file
+# Lex @ https://github.com/claire-lex/mish - 2022-2023
+#
+# Mish: Shell environment for penetration tests.
+#
+# This file contains network discovery functions usable when mishrc is sourced.
+# These functions can be used even if mish's pentest environment is off.
+# Help: mish help
 
 ################################################################################
 # CONFIG                                                                       #

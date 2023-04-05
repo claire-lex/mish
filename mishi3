@@ -1,8 +1,9 @@
 #!/bin/bash
 # Mish i3 script
-# Lex @ https://github.com/claire-lex/mish - 2022
+# Lex @ https://github.com/claire-lex/mish - 2022-2023
 #
 # Mish: Shell environment for penetration tests.
+#
 # i3block script displaying to know if an environment is enabled, and if so,
 # which one (displays the name of current env is active)
 #

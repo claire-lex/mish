@@ -15,11 +15,12 @@ environment during an assessment to load:
 TL;DR
 -----
 
-**1. Check requirements:** `complete` `net` `nmap` `script`. All of them are
-     usually already installed.
+**1. Check requirements.**
+
+`complete` `net` `nmap` `script`. All of them are usually already installed.
 
 **2. Add this line in your usual terminal RC or alias file (`.bash_aliases`,
-     `.zshrc`, ...) to prepare mish for loading**:
+     `.zshrc`, ...) to prepare mish for loading**.
 
 ```
 source path/to/mishrc
@@ -29,7 +30,7 @@ Mish does nothing by default, it needs to be enabled (`start`). However, if it
 is sourced, network discovery functions (netcommands) can be used even when the
 environment is off.
 
-**3. Initialize and start an assessment environment:**
+**3. Initialize and start an assessment environment.**
 
 ```
 mish start
@@ -40,7 +41,7 @@ mish start
   your current customer.
 
 **4. The environment enables display and logging functions (details in
-  Behavior).**
+  [Behavior](#behavior)).**
 
 * Create a dedicated history file
 * Store script records of all terminals
@@ -50,11 +51,13 @@ mish start
 > The i3blocks addon `mishi3` can be used to know when mish is enabled, see
   below.
 
-**5. Pause or stop the current assessment environment:**
+**5. Pause or stop the current assessment environment.**
 
 ```
 mish stop
 ```
+
+[![asciicast](https://asciinema.org/a/oCB1jKFbGsymNBhdCxxoKrf81.svg)](https://asciinema.org/a/oCB1jKFbGsymNBhdCxxoKrf81)
 
 Behavior
 --------
