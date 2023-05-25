@@ -57,8 +57,6 @@ mish start
 mish stop
 ```
 
-[![asciicast](https://asciinema.org/a/oCB1jKFbGsymNBhdCxxoKrf81.svg)](https://asciinema.org/a/oCB1jKFbGsymNBhdCxxoKrf81)
-
 Behavior
 --------
 
