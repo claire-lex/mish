@@ -42,6 +42,7 @@ MISH_VULPATH_NAME="vulns"
 # Constants
 MISH_ENV_TITLE="name"
 MISH_PATH_TITLE="path"
+MISH_IFACE_TITLE="iface"
 MISH_STATUS_TITLE="status"
 
 # Read data from configuration file if it exists
@@ -51,6 +52,8 @@ if [[ -f $MISH_CONFIG_PATH ]]; then
             MISH_ENV="${line#*=}"
 	elif [[ $line == "$MISH_PATH_TITLE="* ]]; then
             MISH_PATH="${line#*=}"
+	elif [[ $line == "$MISH_IFACE_TITLE="* ]]; then
+            MISH_IFACE="${line#*=}"
 	elif [[ $line == "$MISH_STATUS_TITLE="* ]]; then
             MISH_STATUS="${line#*=}"
 	fi
@@ -58,6 +61,7 @@ if [[ -f $MISH_CONFIG_PATH ]]; then
 else
     # Default values
     MISH_ENV=""
+    MISH_IFACE=""
     MISH_STATUS="off"
 fi
 
@@ -111,6 +115,7 @@ function print_config {
 function write_config {
     echo "$MISH_ENV_TITLE=$MISH_ENV" > $MISH_CONFIG_PATH
     echo "$MISH_PATH_TITLE=$MISH_PATH" >> $MISH_CONFIG_PATH
+    echo "$MISH_IFACE_TITLE=$MISH_IFACE" >> $MISH_CONFIG_PATH
     echo "$MISH_STATUS_TITLE=$MISH_STATUS" >> $MISH_CONFIG_PATH
 }
 
@@ -120,6 +125,7 @@ function start {
     if [[ $new_env != "" ]]; then
 	MISH_ENV=$new_env
     fi
+    # Set path, it should be valid.
     success=1
     for (( ; $success != 0 ; )); do
 	echo -n "Enter path for mish files [$MISH_PATH]: "
@@ -134,15 +140,28 @@ function start {
 	    success=0
 	fi
     done
+    # Set network interface, don't check it because it may not be enabled yet.
+    echo -n "List of interfaces available:"
+    echo $(ip -o link show | awk -F ': ' '{print $2}' | tr '\n' ' ')
+    echo -n "Enter network interface to use [$MISH_IFACE]: "
+    read new_iface
+    if [[ $new_iface == "" ]]; then
+	new_iface=$MISH_IFACE
+    fi
+    MISH_IFACE=$new_iface
+    ip a show dev $new_iface > /dev/null 2>&1
+    if [[ $? != 0 ]]; then
+	ERROR "Warning: The interface does not seem to exist!"
+    fi
     MISH_STATUS="on"
     write_config
-
     ECHO "Starting environment for $MISH_ENV."
 }
 
 function status {
     ECHO "Environment name:" $MISH_ENV
     ECHO "Path:" $MISH_PATH/$MISH_ENV
+    ECHO "Network interface:" $MISH_IFACE
     ECHO "Status:" $MISH_STATUS
     exit
 }
@@ -209,6 +228,9 @@ if [[ $MISH_STATUS == "on" ]]; then
     # .bash_aliases too) to avoid an endless loop.
     term="$(ps -ocommand= -p $PPID | awk '{print $1}')"
     if [[ $term != 'script' ]]; then
+	MISH_CURRENT_IP=$(ip -4 addr show $MISH_IFACE | awk '$1 == "inet" {print $2}' | cut -d'/' -f1)
+	# Exporting variable that will be used by mishnet
+	export MISHIP=$MISH_CURRENT_IP
 	export MISHCMD=$MISH_CURRENT_CMDPATH
 	MISH_CURRENT_SCRIPT="$MISH_CURRENT_LOGPATH/$MISH_ENV.`date +%Y%m%d-%H%M%S`.script"
 	echo "********************************************************************"

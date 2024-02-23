@@ -28,8 +28,9 @@ ARG_DOMAIN=""
 ARG_USER=""
 ARG_PASSWD=""
 
-# Environment variable to use
+# Environment variables to use
 ENV_MISHCMD=$MISHCMD
+ENV_MISHIP=$MISHIP
 
 # Messages
 HELP="Usage: $MISH_ALIAS [$NETCOMMAND_LIST] [-n -o [outfile] -t [threadnumber]]"
@@ -229,7 +230,14 @@ if ! $ARG_NOFILE; then
     # Output files are stored to the env's current traces dir if enabled.
     # If not, files are stored on the current working directory.
     if [[ "$ENV_MISHCMD" != "" ]]; then
-	ARG_OUTPUTFILE="$ENV_MISHCMD/$ARG_OUTPUTFILE"
+	# If the source IP address is set on current interface, we store traces
+	# in a subfolder with the IP source, otherwire directly in traces folder.
+	if [[ "$ENV_MISHIP" != "" ]]; then
+	    mkdir -p "$ENV_MISHCMD/$ENV_MISHIP/"
+	    ARG_OUTPUTFILE="$ENV_MISHCMD/$ENV_MISHIP/$ARG_OUTPUTFILE"
+	else
+	    ARG_OUTPUTFILE="$ENV_MISHCMD/$ARG_OUTPUTFILE"
+	fi
     fi
     touch "$ARG_OUTPUTFILE"
 fi
