@@ -18,7 +18,7 @@ COMMAND_LIST="help start status stop"
 NETCOMMAND_LIST="list ping host admin"
 HELP="Usage: $MISH_ALIAS [$COMMAND_LIST $NETCOMMAND_LIST]"
 
-# Variables for enabled nvironments (will be updated with config)
+# Variables for enabled environments (will be updated with config)
 MISH_CURRENT_PATH=""
 MISH_CURRENT_HISTORY=""
 
@@ -117,6 +117,12 @@ function write_config {
     echo "$MISH_PATH_TITLE=$MISH_PATH" >> $MISH_CONFIG_PATH
     echo "$MISH_IFACE_TITLE=$MISH_IFACE" >> $MISH_CONFIG_PATH
     echo "$MISH_STATUS_TITLE=$MISH_STATUS" >> $MISH_CONFIG_PATH
+}
+
+function setup_firefox {
+    # Create profile and use it
+    firefox -CreateProfile $MISH_ENV $MISH_CURRENT_LOGPATH
+    alias firefox="MESA_DEBUG=silent firefox -P $MISH_ENV"
 }
 
 function start {
@@ -232,6 +238,7 @@ if [[ $MISH_STATUS == "on" ]]; then
 	# Exporting variable that will be used by mishnet
 	export MISHIP=$MISH_CURRENT_IP
 	export MISHCMD=$MISH_CURRENT_CMDPATH
+	# All set!
 	MISH_CURRENT_SCRIPT="$MISH_CURRENT_LOGPATH/$MISH_ENV.`date +%Y%m%d-%H%M%S`.script"
 	echo "********************************************************************"
 	echo "MISH ENVIRONMENT IS ENABLED ($MISH_ENV)"
@@ -244,5 +251,6 @@ if [[ $MISH_STATUS == "on" ]]; then
 	fi
     fi
     # Move to the environment's directory:
+    setup_firefox
     cd $MISH_PATH/$MISH_ENV
 fi
