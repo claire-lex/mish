@@ -14,7 +14,7 @@
 
 MISH_ALIAS="mish"
 THREAD_LIMIT=256 # Arbitrary, for additional protection. Feel free to change it.
-NETCOMMAND_LIST="ping host"
+NETCOMMAND_LIST="list ping host admin"
 
 # Default values for arguments
 ARG_COMMAND=""
@@ -22,6 +22,11 @@ ARG_IPRANGE=""
 ARG_MAXTHREAD=256 # Default value, change with -t [number]
 ARG_NOFILE=false # Set to true with -n: prevents from writing results to a file.
 ARG_OUTPUTFILE="" # Change with -o [filename]
+ARG_ENGLISH=false # Set to true to use english words instead of french ones.
+# For "admin"
+ARG_DOMAIN=""
+ARG_USER=""
+ARG_PASSWD=""
 
 # Environment variable to use
 ENV_MISHCMD=$MISHCMD
@@ -66,12 +71,15 @@ trap EXIT SIGINT
 
 function help {
     echo "\
+list    List all IP addresses in a range
 ping    Run ping on a range
 host	Run host on a range
+admin   Extract the list of local administrators on Windows hosts on a range
+	additional args: -d [domain] -u [username] -p [password]
 
  options to netcommands:
 -n 	Do not store results to a file
--o name Change the name of the output file (default: <range>.<date>.<cmd>.mish): 
+-o name Change the name of the output file (default: <range>.<cmd>.<date>.mish): 
 -t num  Number of threads to use (default is $ARG_MAXTHREAD)
 
 $HELP
@@ -95,6 +103,19 @@ function mish_host {
     out=$(host $1)
     if [ $? -eq 00 ]; then
 	OUTPUT "$ip: $(echo ${out%%\.} | awk '/domain name pointer/{print $NF}')"
+    fi
+}
+
+function mish_admin {
+    ip=$1
+    adm="Administrateurs"
+    if $ARG_ENGLISH; then
+	adm="Administrators"
+    fi
+    out=$(net rpc group members $adm -W $ARG_DOMAIN -U $ARG_DOMAIN\\$ARG_USER%$ARG_PASSWD -I $ip)
+    if [ $? -eq 00 ]; then
+	OUTPUT "--- $ip ---"
+	OUTPUT "$out"
     fi
 }
 
@@ -144,14 +165,30 @@ while [[ $# -gt 0 ]]; do
 	    ARG_OUTPUTFILE="$1"
 	    shift
 	    ;;
+	-en|--english)
+	    ARG_ENGLISH=true
+	    shift
+	    ;;
+	-d|--domain)
+	    shift
+	    ARG_DOMAIN="$1"
+	    shift
+	    ;;
+	-u|--user)
+	    shift
+	    ARG_USER="$1"
+	    shift
+	    ;;
+	-p|--password)
+	    shift
+	    ARG_PASSWD="$1"
+	    shift
+	    ;;
 	*)
-	    # Argument principal : IPv4 ou range au format A.B.C.D/R
-	    if [[ "$1" =~ ^([0-9]{1,3}\.){3}[0-9]{1,3}(\/[0-9]+)?$ ]]; then
-		ARG_IPRANGE="$1"
-	    else
-		ERROR "Error: Unknown argument: $1."
-		exit
-	    fi
+	    # Should be the IP address, we don't check for it and let nmap see
+	    # if it is valid, otherwise the regex would be too complicated to
+	    # cover all accepted formats.
+	    ARG_IPRANGE="$1"
 	    shift
 	    ;;
     esac
@@ -164,6 +201,12 @@ if [[ $ARG_COMMAND == "ping" ]]; then
     COMMAND=mish_ping
 elif [[ $ARG_COMMAND == "host" ]]; then
     COMMAND=mish_host
+elif [[ $ARG_COMMAND == "admin" ]]; then
+    if [[ -z $ARG_DOMAIN || -z $ARG_USER || -z $ARG_PASSWD ]]; then
+	ERROR "Missing arguments for \"admin\" mode (requires -d, -u, -p)."
+	exit
+    fi
+    COMMAND=mish_admin
 fi
 
 #--- Prepare IP list with nmap ------------------------------------------------#
@@ -181,7 +224,7 @@ fi
 if ! $ARG_NOFILE; then
     if [[ -z $ARG_OUTPUTFILE ]]; then
 	outrange=$(echo "$ARG_IPRANGE" | sed -r 's/[/]+/_/g')
-	ARG_OUTPUTFILE="$outrange.`date +%Y%m%d-%H%M%S`.$ARG_COMMAND.$MISH_ALIAS"
+	ARG_OUTPUTFILE="$outrange.$ARG_COMMAND.`date +%Y%m%d-%H%M%S`.$MISH_ALIAS"
     fi
     # Output files are stored to the env's current traces dir if enabled.
     # If not, files are stored on the current working directory.
@@ -190,6 +233,13 @@ if ! $ARG_NOFILE; then
     fi
     touch "$ARG_OUTPUTFILE"
 fi
+
+#--- If command is "list", mish stops here and just return the result ---------#
+
+if [[ $ARG_COMMAND == "list" ]]; then
+    OUTPUT "$IPLIST"
+    exit
+fi    
 
 #--- Loop over the IP range and spawn background tasks up to $ARG_MAXTHREAD ---#
 

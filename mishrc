@@ -15,7 +15,7 @@
 # Usage
 MISH_ALIAS="mish"
 COMMAND_LIST="help start status stop"
-NETCOMMAND_LIST="ping host"
+NETCOMMAND_LIST="list ping host admin"
 HELP="Usage: $MISH_ALIAS [$COMMAND_LIST $NETCOMMAND_LIST]"
 
 # Variables for enabled nvironments (will be updated with config)
