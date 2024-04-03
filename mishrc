@@ -15,7 +15,7 @@
 # Usage
 MISH_ALIAS="mish"
 COMMAND_LIST="help start status stop"
-NETCOMMAND_LIST="list ping host admin"
+NETCOMMAND_LIST="show list ping host admin"
 HELP="Usage: $MISH_ALIAS [$COMMAND_LIST $NETCOMMAND_LIST]"
 
 # Variables for enabled environments (will be updated with config)
@@ -238,6 +238,7 @@ if [[ $MISH_STATUS == "on" ]]; then
 	MISH_CURRENT_IP=$(ip -4 addr show $MISH_IFACE | sed 's/\x1B\[[0-9;]\{1,\}[A-Za-z]//g' | awk '$1 == "inet" {print $2}' | cut -d'/' -f1)
 	# Exporting variable that will be used by mishnet
 	export MISHIP=$MISH_CURRENT_IP
+	export MISHIFACE=$MISH_IFACE
 	export MISHCMD=$MISH_CURRENT_CMDPATH
 	# All set!
 	MISH_CURRENT_SCRIPT="$MISH_CURRENT_LOGPATH/$MISH_ENV.`date +%Y%m%d-%H%M%S`.script"

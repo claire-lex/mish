@@ -14,7 +14,7 @@
 
 MISH_ALIAS="mish"
 THREAD_LIMIT=256 # Arbitrary, for additional protection. Feel free to change it.
-NETCOMMAND_LIST="list ping host admin"
+NETCOMMAND_LIST="show list ping host admin"
 
 # Default values for arguments
 ARG_COMMAND=""
@@ -29,8 +29,9 @@ ARG_USER=""
 ARG_PASSWD=""
 
 # Environment variables to use
-ENV_MISHCMD=$MISHCMD
 ENV_MISHIP=$MISHIP
+ENV_MISHIFACE=$MISHIFACE
+ENV_MISHCMD=$MISHCMD
 
 # Messages
 HELP="Usage: $MISH_ALIAS [$NETCOMMAND_LIST] [-n -o [outfile] -t [threadnumber]]"
@@ -72,6 +73,7 @@ trap EXIT SIGINT
 
 function help {
     echo "\
+show	Display a collection of information about the current network
 list    List all IP addresses in a range
 ping    Run ping on a range
 host	Run host on a range
@@ -91,6 +93,43 @@ These netcommands run a basic network discovery commands on a range
 }
 
 #--- Ping ---------------------------------------------------------------------#
+
+function mish_show {
+    if [[ -z $ENV_MISHIFACE ]]; then
+	ERROR "No interface selected (is mish enabled?)"
+	exit
+    fi
+    nmcli="$(nmcli dev show $ENV_MISHIFACE)"
+    if [[ $? != 0 ]]; then
+	ERROR "Interface is invalid ($ENV_MISHIFACE)"
+	exit
+    fi
+    macaddr=$(echo "$nmcli" | grep "GENERAL.HWADDR" | tr -s " " | cut -d' ' -f2)
+    OUTPUT "NETWORK INFORMATION FOR $ENV_MISHIP ($ENV_MISHIFACE, $macaddr)"
+    OUTPUT ""
+    conn=$(echo "$nmcli" | grep "GENERAL.CONNECTION" | tr -s " " | cut -d' ' -f2)
+    OUTPUT "$(printf "%-20s: %s\n" "Connection" "$conn")"
+    ip4addr=$(echo "$nmcli" | grep "IP4.ADDRESS" | tr -s " " | cut -d' ' -f2)
+    OUTPUT "$(printf "%-20s: %s\n" "IPv4 address" "$ip4addr")"
+    ip4gw=$(echo "$nmcli" | grep "IP4.GATEWAY" | tr -s " " | cut -d' ' -f2)
+    OUTPUT "$(printf "%-20s: %s\n" "Gateway" "$ip4gw")"
+    ip4dns=$(echo "$nmcli" | grep "IP4.DNS" | tr -s " " | cut -d' ' -f2)
+    OUTPUT "$(printf "%-20s: %s\n" "DNS" "$ip4dns")"
+    ip4route=$(echo "$nmcli" | grep "IP4.ROUTE" | tr -s " " | cut -d' ' -f4 | tr -d "\n" | tr "," " ")
+    OUTPUT "$(printf "%-20s: %s\n" "Route" "$ip4route")"
+    domain=$(echo "$nmcli" | grep "IP4.DOMAIN" | tr -s " " | cut -d' ' -f2)
+    OUTPUT "$(printf "%-20s: %s\n" "Domain" "$domain")"
+    if [[ -n $domain ]]; then
+	dc=$(nslookup $domain | grep "Address" | tr "\t" " " | cut -d' ' -f2 | tr "\n" " ")
+	OUTPUT "$(printf "%-20s: %s\n" "DC" "$dc")"
+    fi
+    OUTPUT ""
+    # The next commands require sudoers privileges
+    netbios="$(sudo nbtscan -r $ip4addr 2>/dev/null)"
+    if [[ $? == 0 ]]; then
+	OUTPUT "$netbios"
+    fi
+}
 
 function mish_ping {
   ip=$1
@@ -212,12 +251,21 @@ fi
 
 #--- Prepare IP list with nmap ------------------------------------------------#
 
-IPLIST=$(nmap -sL -n "$ARG_IPRANGE" | awk '/Nmap scan report/{print $NF}')
-
-# Error check before going further :)
-if [[ -z $IPLIST ]]; then
-    ERROR "$ERROR_IPRANGE"
-    exit
+# We don't need an IP range for show
+if [[ $ARG_COMMAND != "show" ]]; then
+    IPLIST=$(nmap -sL -n "$ARG_IPRANGE" | awk '/Nmap scan report/{print $NF}')
+    # Error check before going further :)
+    if [[ -z $IPLIST ]]; then
+	ERROR "$ERROR_IPRANGE"
+	exit
+    fi
+else
+    # We set the IP range so that it is our IP (for filename)
+    if [[ -z $ENV_MISHIP ]]; then
+	ERROR "IP address is not set (is mish enabled?)"
+	exit
+    fi
+    ARG_IPRANGE="$ENV_MISHIP"
 fi
 
 #--- Prepare output file if -n not set ----------------------------------------#
@@ -240,6 +288,13 @@ if ! $ARG_NOFILE; then
 	fi
     fi
     touch "$ARG_OUTPUTFILE"
+fi
+
+#--- If command is "show", we only give network information and don't loop ----#
+
+if [[ $ARG_COMMAND == "show" ]]; then
+    mish_show
+    exit
 fi
 
 #--- If command is "list", mish stops here and just return the result ---------#
