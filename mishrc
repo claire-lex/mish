@@ -234,7 +234,8 @@ if [[ $MISH_STATUS == "on" ]]; then
     # .bash_aliases too) to avoid an endless loop.
     term="$(ps -ocommand= -p $PPID | awk '{print $1}')"
     if [[ $term != 'script' ]]; then
-	MISH_CURRENT_IP=$(ip -4 addr show $MISH_IFACE | awk '$1 == "inet" {print $2}' | cut -d'/' -f1)
+	# The sed is to remove color if ip outputs with color (ip -c)
+	MISH_CURRENT_IP=$(ip -4 addr show $MISH_IFACE | sed 's/\x1B\[[0-9;]\{1,\}[A-Za-z]//g' | awk '$1 == "inet" {print $2}' | cut -d'/' -f1)
 	# Exporting variable that will be used by mishnet
 	export MISHIP=$MISH_CURRENT_IP
 	export MISHCMD=$MISH_CURRENT_CMDPATH
