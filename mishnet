@@ -92,13 +92,9 @@ These netcommands run a basic network discovery commands on a range
 "
 }
 
-#--- Ping ---------------------------------------------------------------------#
+#--- Show ---------------------------------------------------------------------#
 
-function mish_show {
-    if [[ -z $ENV_MISHIFACE ]]; then
-	ERROR "No interface selected (is mish enabled?)"
-	exit
-    fi
+function mish_show_nmcli {
     nmcli="$(nmcli dev show $ENV_MISHIFACE)"
     if [[ $? != 0 ]]; then
 	ERROR "Interface is invalid ($ENV_MISHIFACE)"
@@ -124,12 +120,41 @@ function mish_show {
 	OUTPUT "$(printf "%-20s: %s\n" "DC" "$dc")"
     fi
     OUTPUT ""
+}
+
+function mish_show_dns {
+    OUTPUT "DNS information (nslookup):"
+    nslookup_ext="$(nslookup google.com)"
+    server=$(echo "$nslookup_ext" | grep "Server" | tr -d '\t'| cut -d: -f2)
+    addr=$(echo "$nslookup_ext" | grep "Address" | head -n1 | tr -d '\t'| cut -d: -f2)
+    OUTPUT "$(printf "%-20s: %s\n" "Server" "$server ($addr)")"
+    # Do we have a DNS for server?
+    host="$(host -t ns $server)"
+    if [[ $? == 0 ]]; then
+	OUTPUT $host
+	nslookup_int="$(nslookup $server)"
+	OUTPUT $nslookup_int # En attendant meilleurs résultats
+    fi
+    OUTPUT ""
+}
+
+function mish_show {
+    if [[ -z $ENV_MISHIFACE ]]; then
+	ERROR "No interface selected (is mish enabled?)"
+	exit
+    fi
+    # Global network info with nmcli dev show <iface>
+    mish_show_nmcli
+    # Nameservers (and DC) info with nslookup and host
+    mish_show_dns
     # The next commands require sudoers privileges
     netbios="$(sudo nbtscan -r $ip4addr 2>/dev/null)"
     if [[ $? == 0 ]]; then
 	OUTPUT "$netbios"
     fi
 }
+
+#--- Ping ---------------------------------------------------------------------#
 
 function mish_ping {
   ip=$1
@@ -139,12 +164,16 @@ function mish_ping {
   fi
 }
 
+#--- Host ---------------------------------------------------------------------#
+
 function mish_host {
     out=$(host $1)
     if [ $? -eq 00 ]; then
 	OUTPUT "$ip: $(echo ${out%%\.} | awk '/domain name pointer/{print $NF}')"
     fi
 }
+
+#--- Admin ---------------------------------------------------------------------#
 
 function mish_admin {
     ip=$1
