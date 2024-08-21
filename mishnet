@@ -1,6 +1,6 @@
 #!/bin/bash
-# Mish RC file
-# Lex @ https://github.com/claire-lex/mish - 2022-2023
+# Mish netcommand file
+# Lex @ https://github.com/claire-lex/mish - 2022-2024
 #
 # Mish: Shell environment for penetration tests.
 #
@@ -78,7 +78,7 @@ list    List all IP addresses in a range
 ping    Run ping on a range
 host	Run host on a range
 admin   Extract the list of local administrators on Windows hosts on a range
-	additional args: -d [domain] -u [username] -p [password]
+	additional args: -d [domain] -u [username] -p [password] [-en]
 
  options to netcommands:
 -n 	Do not store results to a file
@@ -86,7 +86,7 @@ admin   Extract the list of local administrators on Windows hosts on a range
 -t num  Number of threads to use (default is $ARG_MAXTHREAD)
 
 $HELP
-These netcommands run a basic network discovery commands on a range
+These netcommands run basic network discovery commands on a range
 (multithreaded) and output the results to a file (by default).
 
 "

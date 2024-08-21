@@ -1,6 +1,6 @@
 #!/bin/bash
 # Mish RC file
-# Lex @ https://github.com/claire-lex/mish - 2022-2023
+# Lex @ https://github.com/claire-lex/mish - 2022-2024
 #
 # Mish: Shell environment for penetration tests.
 #
@@ -28,6 +28,8 @@ MISH_RC_FILE="mishrc"
 MISH_RC_PATH="$MISH_DIR/$MISH_RC_FILE"
 MISH_NET_FILE="mishnet"
 MISH_NET_PATH="$MISH_DIR/$MISH_NET_FILE"
+MISH_NMAP_FILE="mishmap"
+MISH_NMAP_PATH="$MISH_DIR/$MISH_NMAP_FILE"
 
 # Configuration file
 MISH_CONFIG_FILE=".mishconfig"
@@ -123,6 +125,10 @@ function setup_firefox {
     # Create profile and use it
     firefox -CreateProfile $MISH_ENV $MISH_CURRENT_LOGPATH
     alias firefox="MESA_DEBUG=silent firefox -P $MISH_ENV"
+}
+
+function setup_aliases {
+    alias nmap=$MISH_NMAP_PATH
 }
 
 function start {
@@ -253,6 +259,7 @@ if [[ $MISH_STATUS == "on" ]]; then
 	fi
     fi
     # Move to the environment's directory:
+    setup_aliases
     setup_firefox
     cd $MISH_PATH/$MISH_ENV
 fi

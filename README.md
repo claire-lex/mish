@@ -46,7 +46,7 @@ mish start
 * Create a dedicated history file
 * Store script records of all terminals
 * Change terminal prompts
-* Provide network discovery basic functions
+* Provide network and AD discovery basic functions
 
 > The i3blocks addon `mishi3` can be used to know when mish is enabled, see
   below.
@@ -72,6 +72,9 @@ Here is what happens in background when mish is enabled:
      that is opened, meaning that everything that is printed to these terminals
      are logged. One file per terminal is created.
 
+   * The command "nmap" has an additionnal wrapper so that every nmap command
+     generates timed nmap and grapable output files in the traces directory.
+
 > Log and history files are stored in the directory defined at setup.
 
 2. Change the terminal prompt. By default, it just adds the name of the
@@ -89,7 +92,7 @@ environment is not loaded.
 ```
 $> mish help
 
-Usage: mish [help start status stop ping host]
+Usage: mish [help start status stop show list ping host admin]
 
  commands:
 help	Display this help
@@ -98,18 +101,21 @@ status	Get information about mish's current status
 stop	Disable mish environment
 
  netcommands (call to mishnet):
+show	Display a collection of information about the current network
+list    List all IP addresses in a range
 ping    Run ping on a range
 host	Run host on a range
+admin   Extract the list of local administrators on Windows hosts on a range
+	additional args: -d [domain] -u [username] -p [password] [-en]
 
  options to netcommands:
 -n 	Do not store results to a file
--o name Change the name of the output file (default: <range>.<date>.<cmd>.mish): 
+-o name Change the name of the output file (default: <range>.<cmd>.<date>.mish): 
 -t num  Number of threads to use (default is 256)
 
-Usage: mish [ping host] [-n -o [outfile] -t [threadnumber]]
-These netcommands run a basic network discovery commands on a range
+Usage: mish [show list ping host admin] [-n -o [outfile] -t [threadnumber]]
+These netcommands run basic network discovery commands on a range
 (multithreaded) and output the results to a file (by default).
-
 ```
 
 > Unless specified with option `-n`, the result of every command that is printed
@@ -119,7 +125,14 @@ These netcommands run a basic network discovery commands on a range
 
 ### Network discovery basic functions (netcommands)
 
-Mish has functions to do very basic network-related stuff, but on a range.
+Mish has functions to do very basic network-related stuff.
+
+* **show** network information, combining the output of several commands (nmcli,
+  nslookup, nbtns, etc.) to find out where we just landed:
+
+```
+mish show
+```
 
 * **ping** on a range (one ping request sent per host):
 
@@ -133,16 +146,30 @@ mish ping 192.168.1.0/24
 mish host 192.168.1.0/24
 ```
 
-Option `-n` can be used with any command to avoid storing the output to a
-file. Otherwise, the results are stored like this:
+* **admin** on a range to list the local administrators on each host via
+    RPC. This one requires domain account credentials, the account does not need
+    to be privileged.
 
 ```
-$> cat 192.168.1.1_24.20230403-144038.ping.mish
+mish admin 192.168.1.0/24 -d domain.local -u username -p password
+```
+
+Output
+------
+
+By default, every command stores its output in a file with format
+`<range>.<command>.<date>.mish` in mish's `traces` directory. The results are
+stored like this:
+
+```
+$> cat 192.168.1.1_24.ping.20230403-144038.mish
 192.168.1.1
 192.168.1.20
 192.168.1.73
 192.168.1.14
 ```
+
+Option `-n` can be used with any command to avoid storing the output to a file.
 
 Use i3blocks addon
 ------------------
@@ -168,7 +195,7 @@ color=#FF0000
 TODO
 ----
 
-* [ ] Automated logging for `nmap`
+* [X] Automated logging for `nmap`
 * [ ] Store basic results in a DB
 * [ ] `mish note`
 * [ ] Be able to change more things from the configuration file (e.g.: folder

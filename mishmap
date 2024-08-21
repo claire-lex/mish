@@ -1,0 +1,109 @@
+#!/bin/bash
+# Mish nmap wrapper file
+# Lex @ https://github.com/claire-lex/mish - 2022-2024
+#
+# Mish: Shell environment for penetration tests.
+#
+# This file is a wrapper to extract and store nmap results more easily.
+# No change in nmap's behavior itself.
+# Help: mish help
+
+################################################################################
+# CONFIG                                                                       #
+################################################################################
+
+# We need to store the command line to run it with nmap later
+FULL_CMD="$*"
+
+# Environment variables to use
+ENV_MISHIP=$MISHIP
+ENV_MISHIFACE=$MISHIFACE
+ENV_MISHCMD=$MISHCMD
+
+# Content of the final trace file name
+RANGE="" # IP address or range
+SCAN="" # Type of scan
+PORT="all" # Information about the number of ports scanned, default: all
+SCRIPT="" # If --script, we will use the name in arg
+FILENAME="" # If a filename is specified, we use it instead
+
+################################################################################
+# ARGUMENT PARSING                                                             #
+################################################################################
+
+# Parsing some arguments (not all) to build the file name
+while [[ $# -gt 0 ]]; do
+    case "$1" in
+	-sL|-sP|-sT|-sU|-sS|-sV)
+	    if [[ $str != -* ]]; then
+		SCAN="${1//-/}" # Only keep sT and not -sT
+	    fi
+	    shift
+	    ;;
+	-p*)
+	    if [[ "$1" == "-p" ]]; then
+		shift
+		p="$1"
+	    elif [[ "$1" == -p* ]]; then
+		p=${1//-p/}
+	    fi
+	    # p is out port list
+	    echo "$p"
+	    if [[ "$p" == "-" ]]; then
+		PORT="full"
+	    elif [[ $p =~ ^[0-9]+$ ]]; then
+		PORT="$p"
+	    else
+		PORT="select"
+	    fi
+	    shift
+	    ;;
+	--script)
+	    shift
+	    SCRIPT="${1//\*/}." # Remove * if any
+	    shift
+	    ;;
+	-oN|-oX|-oG|-oA)
+	    shift
+	    FILENAME="$1"
+	    shift
+	    ;;
+	*)
+	    # Is this IP address / range?
+	    ip_list=$(nmap -sL -n "$1" 2> /dev/null | awk '/Nmap scan report/{print $NF}')
+	    if [[ -n $ip_list ]]; then
+		RANGE="${1//\//_}"
+	    fi
+	    shift
+	    ;;
+    esac
+done
+
+################################################################################
+# PREPARE FOR LOG FILE NAME AND PATH                                           #
+################################################################################
+
+if [[ -n $FILENAME ]]; then
+    FILENAME="$FILENAME"
+else
+    FILENAME="$RANGE.$SCAN.$PORT.$SCRIPT`date +%Y%m%d-%H%M%S`"
+fi
+
+# Output files are stored to the env's current traces dir if enabled.
+# If not, files are stored on the current working directory.
+if [[ "$ENV_MISHCMD" != "" ]]; then
+    # If the source IP address is set on current interface, we store traces
+    # in a subfolder with the IP source, otherwire directly in traces folder.
+    if [[ "$ENV_MISHIP" != "" ]]; then
+	mkdir -p "$ENV_MISHCMD/$ENV_MISHIP/"
+	FILENAME="$ENV_MISHCMD/$ENV_MISHIP/$FILENAME"
+    else
+	FILENAME="$ENV_MISHCMD/$FILENAME"
+    fi
+fi
+
+################################################################################
+# RUN NMAP                                                                     #
+################################################################################
+
+sudo nmap --open -v $FULL_CMD -oN "$FILENAME.nmap" -oG "$FILENAME.gnmap"
