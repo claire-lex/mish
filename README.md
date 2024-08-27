@@ -18,7 +18,7 @@ TL;DR
 **1. Check requirements.**
 
 Base pack:
-`complete` `net` `nmap` `script`. All of them are usually already installed.
+`complete` `net` `nmap` `script` `nc`. All of them are usually already installed.
 
 For the screenshot capabilities:
 `apt install imagemagick rdesktop chromium-browser vncsnapshot`
@@ -49,6 +49,7 @@ mish start
 
 * Create a dedicated history file
 * Store script records of all terminals
+* Increase logging and traces storage for some commands
 * Change terminal prompts
 * Provide network and AD discovery basic functions
 
@@ -77,16 +78,31 @@ Here is what happens in background when mish is enabled:
      are logged. One file per terminal is created.
 
    * The command "nmap" has an additionnal wrapper so that every nmap command
-     generates timed nmap and grapable output files in the traces directory.
-
-> Log and history files are stored in the directory defined at setup.
+     generates timed nmap and grapable output files in the `traces` directory.
 
 2. Change the terminal prompt. By default, it just adds the name of the
    assessment in front of the current prompt.
 
-> The i3blocks addon `mishi3` can be used to know when mish is enabled, see
-  below.
-  
+### Traces
+
+Log and history files are stored in `logs` in the directory defined
+at setup.
+
+Mish net commands (detailed below) and the nmap wrapper create additional file
+stored in the `traces` folder.
+
+The files in `traces` are in a subfolder named after the origin IP address of
+the command (i.e. your host's IP address). This is useful if you are auditing
+several scopes from different VLANs. For instance:
+
+- First audit day, I am in the user VLAN with IP 192.168.1.25. My traces go to
+  `<mish_path>/traces/192.168.1.25/`.
+- Second audit day, I test from the admin VLAN with IP 192.168.100.56. My traces
+  go to `<mish_path>/traces/192.168.100.56/`.
+
+> If the origin IP address cannot be retrieved, the files are stored directly in
+  the `traces` folder.
+
 Commands
 --------
 
@@ -96,7 +112,7 @@ environment is not loaded.
 ```
 $> mish help
 
-Usage: mish [help start status stop show list ping host admin]
+Usage: mish [help start status stop show list ping host screen web vnc rdp admin]
 
  commands:
 help	Display this help
@@ -109,6 +125,9 @@ show	Display a collection of information about the current network
 list    List all IP addresses in a range
 ping    Run ping on a range
 host	Run host on a range
+screen	Screenshot web, RDP and VNC screens on a range
+	separated commands to run only one option: web, vnc, rdp
+	additional args: -p [VNC pwd], --ports [web ports (default: 80,443,8000,8080)]
 admin   Extract the list of local administrators on Windows hosts on a range
 	additional args: -d [domain] -u [username] -p [password] [-en]
 
@@ -117,15 +136,19 @@ admin   Extract the list of local administrators on Windows hosts on a range
 -o name Change the name of the output file (default: <range>.<cmd>.<date>.mish): 
 -t num  Number of threads to use (default is 256)
 
-Usage: mish [show list ping host admin] [-n -o [outfile] -t [threadnumber]]
+Usage: mish [show list ping host screen web vnc rdp admin] [-n -o [outfile] -t [threadnumber]]
 These netcommands run basic network discovery commands on a range
 (multithreaded) and output the results to a file (by default).
 ```
 
-> Unless specified with option `-n`, the result of every command that is printed
-  to stdout is also stored in a file. This file is stored to the env's `traces`
-  directory if the environment is on. Otherwise, it will be stored to the
-  current working directory.
+Unless using option `-n`, the result of every mish command (see below) printed
+to stdout is also stored in a file.
+
+- When the environment is off, the file is created in the current working directory.
+- When the environment is on, the file is created in the `traces` directory.
+
+By default, the file created has a name such as
+`<range>.<command>.<date>.mish`. It can be changed with option `-o`.
 
 ### Network discovery basic functions (netcommands)
 
@@ -150,6 +173,12 @@ mish ping 192.168.1.0/24
 mish host 192.168.1.0/24
 ```
 
+* **screen** on a range for the web, RDP and VNC services. Details below.
+
+```
+mish screen 192.168.1.0/24
+```
+
 * **admin** on a range to list the local administrators on each host via
     RPC. This one requires domain account credentials, the account does not need
     to be privileged.
@@ -158,22 +187,45 @@ mish host 192.168.1.0/24
 mish admin 192.168.1.0/24 -d domain.local -u username -p password
 ```
 
-Output
-------
+#### Screen
 
-By default, every command stores its output in a file with format
-`<range>.<command>.<date>.mish` in mish's `traces` directory. The results are
-stored like this:
+`mish screen` takes screenshots on a range for the web, RDP and VNC services all
+at once. The separate commands `mish web`, `mish rdp` and `mish vnc` can be used
+as well.
+
+- Option `-p/--password` can be used to specify a VNC password.
+- Option `--ports` can be used to specify the port for the web services
+  (default: 80,443,8000,8080).
 
 ```
-$> cat 192.168.1.1_24.ping.20230403-144038.mish
-192.168.1.1
-192.168.1.20
-192.168.1.73
-192.168.1.14
+mish screen 192.168.1.0/24 -p MYVNCPASS
 ```
 
-Option `-n` can be used with any command to avoid storing the output to a file.
+Screenshots are stored in a folder named `screens` in the `traces` directory if
+mish environment is enabled, and in the current working directory otherwise.
+Unless `-n` is specified, a file containing the summary of screenshots taken and
+open ports will be created as well (`traces` or current working directory).
+
+> RDP screenshots do not work if Network Level Authentication (NLA) is
+  enabled, but mish at least tells you if the RDP port open.
+
+This command requires more dependencies than the others, namely:
+
+- `mish web`: `chromium`
+- `mish rdp`: `rdesktop`, `nc`, `import` (`imagemagick`)
+- `mish vnc`: `vncsnapshot` (with `vncpasswd`), `nc`
+
+**Please consider the following information if you want to limit the number of
+  network requests sent**:
+
+Each screenshot takes two steps:
+
+- Check if the service is open (`curl` for web and `nc` for RDP and VNC)
+- Run the command to take the screenshot (`chromium`, `rdesktop`, `vncsnapsot`)
+
+For web services, the 4 default ports are checked both against HTTP and HTTPS,
+with a total of 8 calls to `curl`. If you specify `n` ports (option `--ports`,
+the number of calls to `curl` will be `n*2`.
 
 Use i3blocks addon
 ------------------
@@ -196,15 +248,11 @@ interval=30
 color=#FF0000
 ```
 
-TODO
+Note
 ----
 
-* [X] Automated logging for `nmap`
-* [ ] Store basic results in a DB
-* [ ] `mish note`
-* [ ] Be able to change more things from the configuration file (e.g.: folder
-  names, prompt style, enable and disable things)
-* [ ] `mish config`
-* [ ] Flameshot config file
-* [ ] Checklist system?
-* [ ] Mish as a **Oh My Zsh** plugin?
+This tool reflects my own pentesting habits and may not be suitable for
+yours. However if you like some features of the tool you are encouraged to fork
+it and make it work for you. I will be glad to help.
+
+Also, if you have suggestions, please share them!

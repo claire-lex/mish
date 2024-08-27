@@ -221,36 +221,50 @@ function mish_screen_web {
 
 function mish_screen_rdp {
     filename="$(mish_screenpath)$1.rdp.jpg"
-    rdesktop -u "" "$1"  > /dev/null 2>&1 &
-    pid="$!"
-    sleep 5
-    # The process runs, rdesktop probably active (or trying to connect)
-    # We try to screenshot anyway before killing
-    timeout "$SCREEN_TIMEOUT" import -quiet -window "rdesktop - $1" "$filename" > /dev/null 2>&1
-    if [ $? -eq 00 ]; then
-	OUTPUT "[RDP] $1 ($filename)"
+    # Check if port open
+    if nc -w1 -zv "$1" 3389 &> /dev/null; then 
+	rdesktop -u "" "$1"  > /dev/null 2>&1 &
+	pid="$!"
+	sleep 5
+	# The process runs, rdesktop probably active (or trying to connect)
+	# We try to screenshot anyway before killing
+	timeout "$SCREEN_TIMEOUT" import -quiet -window "rdesktop - $1" "$filename" > /dev/null 2>&1
+	if [ $? -eq 00 ]; then
+	    OUTPUT "[RDP] $1 ($filename)"
+	else
+	    OUTPUT "[RDP] $1 seems to have RDP open but no screenshot taken (NLA enabled?)."
+	fi
+	kill $pid > /dev/null 2>&1
     fi
-    kill $pid > /dev/null 2>&1
 }
 
 function mish_screen_vnc {
     # Without password (we do it even if password specified)
     filename="$(mish_screenpath)$1.vnc.jpg"
-    # We need timeout because vncsnapshot does not know how to stop
-    timeout "$SCREEN_TIMEOUT" vncsnapshot -quiet "$1" "$filename" > /dev/null 2>&1
-    if [ $? -eq 00 ]; then
-	OUTPUT "[VNC] $1 ($filename)"
-    fi
-    # With password
-    if [[ -n "$ARG_PASSWD" ]]; then
-	echo "$ARG_PASSWD" | vncpasswd -f > "$filename.pwd"
-	timeout "$SCREEN_TIMEOUT" vncsnapshot -quiet -passwd "$filename.pwd" "$1" "$filename" > /dev/null 2>&1
+    # Check if port open
+    if nc -w1 -zv "$1" 5900 &> /dev/null; then
+	ok=0
+	# We need timeout because vncsnapshot does not know how to stop
+	timeout "$SCREEN_TIMEOUT" vncsnapshot -quiet "$1" "$filename" > /dev/null 2>&1
 	if [ $? -eq 00 ]; then
 	    OUTPUT "[VNC] $1 ($filename)"
-	    # We keep the password in a separate file to know it works for this IP
-	    echo "$ARG_PASSWD" > "$filename.pwd"
-	else
-	    rm -f "$filename.pwd"
+	    ok=1
+	fi
+	# With password
+	if [[ -n "$ARG_PASSWD" ]]; then
+	    echo "$ARG_PASSWD" | vncpasswd -f > "$filename.pwd"
+	    timeout "$SCREEN_TIMEOUT" vncsnapshot -quiet -passwd "$filename.pwd" "$1" "$filename" > /dev/null 2>&1
+	    if [ $? -eq 00 ]; then
+		OUTPUT "[VNC] $1 ($filename)"
+		# We keep the password in a separate file to know it works for this IP
+		echo "$ARG_PASSWD" > "$filename.pwd"
+		ok=1
+	    else
+		rm -f "$filename.pwd"
+	    fi
+	fi
+	if [[ $ok == 0 ]]; then
+	    OUTPUT "[VNC] $1 seems to have VNC open but no screenshot taken (wrong password?)."
 	fi
     fi
 }
@@ -364,16 +378,12 @@ if [[ $ARG_COMMAND == "ping" ]]; then
 elif [[ $ARG_COMMAND == "host" ]]; then
     COMMAND=mish_host
 elif [[ $ARG_COMMAND == "screen" ]]; then
-    echo "WARNING: RDP with NLA activated will not be detected."
-    echo "WARNING: If -p is not set, password-protected VNC will not be detected."
     COMMAND=mish_screen
 elif [[ $ARG_COMMAND == "web" ]]; then
     COMMAND=mish_screen_web
 elif [[ $ARG_COMMAND == "vnc" ]]; then
-    echo "WARNING: If -p is not set, password-protected VNC will not be detected."
     COMMAND=mish_screen_vnc
 elif [[ $ARG_COMMAND == "rdp" ]]; then
-    echo "WARNING: RDP with NLA activated will not be detected."
     COMMAND=mish_screen_rdp
 elif [[ $ARG_COMMAND == "admin" ]]; then
     if [[ -z $ARG_DOMAIN || -z $ARG_USER || -z $ARG_PASSWD ]]; then
