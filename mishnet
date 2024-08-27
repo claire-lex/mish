@@ -14,7 +14,7 @@
 
 MISH_ALIAS="mish"
 THREAD_LIMIT=256 # Arbitrary, for additional protection. Feel free to change it.
-NETCOMMAND_LIST="show list ping host admin"
+NETCOMMAND_LIST="show list ping host screen web vnc rdp admin"
 
 # Default values for arguments
 ARG_COMMAND=""
@@ -23,6 +23,8 @@ ARG_MAXTHREAD=256 # Default value, change with -t [number]
 ARG_NOFILE=false # Set to true with -n: prevents from writing results to a file.
 ARG_OUTPUTFILE="" # Change with -o [filename]
 ARG_ENGLISH=false # Set to true to use english words instead of french ones.
+# For "screen"
+ARG_PORTS="80,443,8000,8080"
 # For "admin"
 ARG_DOMAIN=""
 ARG_USER=""
@@ -32,6 +34,11 @@ ARG_PASSWD=""
 ENV_MISHIP=$MISHIP
 ENV_MISHIFACE=$MISHIFACE
 ENV_MISHCMD=$MISHCMD
+
+# Other internal configuration
+SCREEN_FOLDER="screens"
+SCREEN_SIZE="1366x768"
+SCREEN_TIMEOUT="3s"
 
 # Messages
 HELP="Usage: $MISH_ALIAS [$NETCOMMAND_LIST] [-n -o [outfile] -t [threadnumber]]"
@@ -77,6 +84,9 @@ show	Display a collection of information about the current network
 list    List all IP addresses in a range
 ping    Run ping on a range
 host	Run host on a range
+screen	Screenshot web, RDP and VNC screens on a range
+	separated commands to run only one option: web, vnc, rdp
+	additional args: -p [VNC pwd], --ports [web ports (default: $ARG_PORTS)]
 admin   Extract the list of local administrators on Windows hosts on a range
 	additional args: -d [domain] -u [username] -p [password] [-en]
 
@@ -173,6 +183,74 @@ function mish_host {
     fi
 }
 
+#--- Screen -------------------------------------------------------------------#
+
+function mish_screenpath {
+    if [[ "$ENV_MISHCMD" != "" ]]; then
+	if [[ "$ENV_MISHIP" != "" ]]; then
+	    mkdir -p "$ENV_MISHCMD/$ENV_MISHIP/$SCREEN_FOLDER"
+	    echo "$ENV_MISHCMD/$ENV_MISHIP/$SCREEN_FOLDER/"
+	else
+	    mkdir -p "$ENV_MISHCMD/$SCREEN_FOLDER"
+	    echo "$ENV_MISHCMD/$SCREEN_FOLDER/"
+	fi
+    else
+	mkdir -p "$(pwd)/$SCREEN_FOLDER"
+	echo "$(pwd)/$SCREEN_FOLDER/"
+    fi
+}
+
+function mish_screen_web {
+    IFS=',' # Internal Field Separator
+    for port in $ARG_PORTS; do
+	for proto in $(echo "http,https"); do
+	    filename="$(mish_screenpath)$1_$port.$proto.web.png"
+	    # Check if page exists
+	    curl --fail --silent --output /dev/null --connect-timeout 1 "$proto://$1:$port"
+	    if [ $? -eq 00 ]; then
+		chromium --headless --screenshot="$filename" --window-size="$SCREEN_SIZE" "$proto://$1:$port" > /dev/null 2>&1
+		# Alternative that does not work well: firefox -p headless
+		# --no-remote --screenshot "$filename" --window-size
+		# "$SCREEN_WIDTH" "$proto://$1:$port" > /dev/null 2>&1
+		OUTPUT "[WEB] $proto://$1:$port ($filename)"
+	    fi
+	done
+    done
+    unset IFS
+}
+
+function mish_screen_rdp {
+    echo "RDP"
+}
+
+function mish_screen_vnc {
+    # Without password (we do it even if password specified)
+    filename="$(mish_screenpath)$1.vnc.jpg"
+    # We need timeout because vncsnapshot does not know how to stop
+    timeout "$SCREEN_TIMEOUT" vncsnapshot -quiet "$1" "$filename" > /dev/null 2>&1
+    if [ $? -eq 00 ]; then
+	OUTPUT "[VNC] $1 ($filename)"
+    fi
+    # With password
+    if [[ -n "$ARG_PASSWD" ]]; then
+	echo "$ARG_PASSWD" | vncpasswd -f > "$filename.pwd"
+	timeout "$SCREEN_TIMEOUT" vncsnapshot -quiet -passwd "$filename.pwd" "$1" "$filename" > /dev/null 2>&1
+	if [ $? -eq 00 ]; then
+	    OUTPUT "[VNC] $1 ($filename)"
+	    # We keep the password in a separate file to know it works for this IP
+	    echo "$ARG_PASSWD" > "$filename.pwd"
+	else
+	    rm -f "$filename.pwd"
+	fi
+    fi
+}
+
+function mish_screen {
+    mish_screen_web $1
+    # mish_screen_rdp $1
+    mish_screen_vnc $1
+}
+
 #--- Admin ---------------------------------------------------------------------#
 
 function mish_admin {
@@ -253,6 +331,11 @@ while [[ $# -gt 0 ]]; do
 	    ARG_PASSWD="$1"
 	    shift
 	    ;;
+	--ports)
+	    shift
+	    ARG_PORTS="$1"
+	    shift
+	    ;;
 	*)
 	    # Should be the IP address, we don't check for it and let nmap see
 	    # if it is valid, otherwise the regex would be too complicated to
@@ -270,6 +353,14 @@ if [[ $ARG_COMMAND == "ping" ]]; then
     COMMAND=mish_ping
 elif [[ $ARG_COMMAND == "host" ]]; then
     COMMAND=mish_host
+elif [[ $ARG_COMMAND == "screen" ]]; then
+    COMMAND=mish_screen
+elif [[ $ARG_COMMAND == "web" ]]; then
+    COMMAND=mish_screen_web
+elif [[ $ARG_COMMAND == "vnc" ]]; then
+    COMMAND=mish_screen_vnc
+elif [[ $ARG_COMMAND == "rdp" ]]; then
+    COMMAND=mish_screen_rdp
 elif [[ $ARG_COMMAND == "admin" ]]; then
     if [[ -z $ARG_DOMAIN || -z $ARG_USER || -z $ARG_PASSWD ]]; then
 	ERROR "Missing arguments for \"admin\" mode (requires -d, -u, -p)."
