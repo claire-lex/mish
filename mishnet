@@ -220,7 +220,17 @@ function mish_screen_web {
 }
 
 function mish_screen_rdp {
-    echo "RDP"
+    filename="$(mish_screenpath)$1.rdp.jpg"
+    rdesktop -u "" "$1"  > /dev/null 2>&1 &
+    pid="$!"
+    sleep 5
+    # The process runs, rdesktop probably active (or trying to connect)
+    # We try to screenshot anyway before killing
+    timeout "$SCREEN_TIMEOUT" import -quiet -window "rdesktop - $1" "$filename" > /dev/null 2>&1
+    if [ $? -eq 00 ]; then
+	OUTPUT "[RDP] $1 ($filename)"
+    fi
+    kill $pid > /dev/null 2>&1
 }
 
 function mish_screen_vnc {
@@ -247,7 +257,7 @@ function mish_screen_vnc {
 
 function mish_screen {
     mish_screen_web $1
-    # mish_screen_rdp $1
+    mish_screen_rdp $1
     mish_screen_vnc $1
 }
 
@@ -354,12 +364,16 @@ if [[ $ARG_COMMAND == "ping" ]]; then
 elif [[ $ARG_COMMAND == "host" ]]; then
     COMMAND=mish_host
 elif [[ $ARG_COMMAND == "screen" ]]; then
+    echo "WARNING: RDP with NLA activated will not be detected."
+    echo "WARNING: If -p is not set, password-protected VNC will not be detected."
     COMMAND=mish_screen
 elif [[ $ARG_COMMAND == "web" ]]; then
     COMMAND=mish_screen_web
 elif [[ $ARG_COMMAND == "vnc" ]]; then
+    echo "WARNING: If -p is not set, password-protected VNC will not be detected."
     COMMAND=mish_screen_vnc
 elif [[ $ARG_COMMAND == "rdp" ]]; then
+    echo "WARNING: RDP with NLA activated will not be detected."
     COMMAND=mish_screen_rdp
 elif [[ $ARG_COMMAND == "admin" ]]; then
     if [[ -z $ARG_DOMAIN || -z $ARG_USER || -z $ARG_PASSWD ]]; then

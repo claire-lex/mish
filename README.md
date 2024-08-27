@@ -17,7 +17,11 @@ TL;DR
 
 **1. Check requirements.**
 
+Base pack:
 `complete` `net` `nmap` `script`. All of them are usually already installed.
+
+For the screenshot capabilities:
+`apt install imagemagick rdesktop chromium-browser vncsnapshot`
 
 **2. Add this line in your usual terminal RC or alias file (`.bash_aliases`,
      `.zshrc`, ...) to prepare mish for loading**.
