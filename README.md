@@ -112,7 +112,7 @@ environment is not loaded.
 ```
 $> mish help
 
-Usage: mish [help start status stop show list ping host screen web vnc rdp admin]
+Usage: mish [help start status stop show list ping host printer screen web vnc rdp admin]
 
  commands:
 help	Display this help
@@ -125,9 +125,10 @@ show	Display a collection of information about the current network
 list    List all IP addresses in a range
 ping    Run ping on a range
 host	Run host on a range
+printer Check if print spooler services are enabled on a Windows host with RPC
 screen	Screenshot web, RDP and VNC screens on a range
 	separated commands to run only one option: web, vnc, rdp
-	additional args: -p [VNC pwd], --ports [web ports (default: 80,443,8000,8080)]
+	additional args: -p [VNC pwd], --ports [web ports (default: 80,443,8000,8080,8888)]
 admin   Extract the list of local administrators on Windows hosts on a range
 	additional args: -d [domain] -u [username] -p [password] [-en]
 
@@ -136,7 +137,7 @@ admin   Extract the list of local administrators on Windows hosts on a range
 -o name Change the name of the output file (default: <range>.<cmd>.<date>.mish): 
 -t num  Number of threads to use (default is 256)
 
-Usage: mish [show list ping host screen web vnc rdp admin] [-n -o [outfile] -t [threadnumber]]
+Usage: mish [show list ping host printer screen web vnc rdp admin] [-n -o [outfile] -t [threadnumber]]
 These netcommands run basic network discovery commands on a range
 (multithreaded) and output the results to a file (by default).
 ```
@@ -185,6 +186,15 @@ mish screen 192.168.1.0/24
 
 ```
 mish admin 192.168.1.0/24 -d domain.local -u username -p password
+```
+
+* **printer** on a range to get a first list of Windows hosts that may be
+  vulnerable to PrintNightmare.  The check is only based on service verification
+  with RPC and may not be reliable, you have to conduct more checks to find out.
+  Relies on Impacket's `rpcdump.py` script.
+
+```
+mish printer 192.168.1.0/24
 ```
 
 #### Screen

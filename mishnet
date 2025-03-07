@@ -14,7 +14,7 @@
 
 MISH_ALIAS="mish"
 THREAD_LIMIT=256 # Arbitrary, for additional protection. Feel free to change it.
-NETCOMMAND_LIST="show list ping host screen web vnc rdp admin"
+NETCOMMAND_LIST="show list ping host printer screen web vnc rdp admin"
 
 # Default values for arguments
 ARG_COMMAND=""
@@ -24,7 +24,7 @@ ARG_NOFILE=false # Set to true with -n: prevents from writing results to a file.
 ARG_OUTPUTFILE="" # Change with -o [filename]
 ARG_ENGLISH=false # Set to true to use english words instead of french ones.
 # For "screen"
-ARG_PORTS="80,443,8000,8080"
+ARG_PORTS="80,443,8000,8080,8888"
 # For "admin"
 ARG_DOMAIN=""
 ARG_USER=""
@@ -84,6 +84,7 @@ show	Display a collection of information about the current network
 list    List all IP addresses in a range
 ping    Run ping on a range
 host	Run host on a range
+printer Check if print spooler services are enabled on a Windows host with RPC
 screen	Screenshot web, RDP and VNC screens on a range
 	separated commands to run only one option: web, vnc, rdp
 	additional args: -p [VNC pwd], --ports [web ports (default: $ARG_PORTS)]
@@ -180,6 +181,16 @@ function mish_host {
     out=$(host $1)
     if [ $? -eq 00 ]; then
 	OUTPUT "$ip: $(echo ${out%%\.} | awk '/domain name pointer/{print $NF}')"
+    fi
+}
+
+#--- Printer ------------------------------------------------------------------#
+
+function mish_printer {
+    ip=$1
+    rpcdump.py $ip | egrep 'MS-RPRN|MS-PAR' > /dev/null 2>&1
+    if [ $? -eq 0 ]; then
+	OUTPUT "$ip"
     fi
 }
 
@@ -391,6 +402,8 @@ elif [[ $ARG_COMMAND == "admin" ]]; then
 	exit
     fi
     COMMAND=mish_admin
+elif [[ $ARG_COMMAND == "printer" ]]; then
+    COMMAND=mish_printer
 fi
 
 #--- Prepare IP list with nmap ------------------------------------------------#

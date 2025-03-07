@@ -15,7 +15,7 @@
 # Usage
 MISH_ALIAS="mish"
 COMMAND_LIST="help start status stop"
-NETCOMMAND_LIST="show list ping host screen web vnc rdp admin"
+NETCOMMAND_LIST="show list ping host printer screen web vnc rdp admin"
 HELP="Usage: $MISH_ALIAS [$COMMAND_LIST $NETCOMMAND_LIST]"
 
 # Variables for enabled environments (will be updated with config)
