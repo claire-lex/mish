@@ -231,22 +231,34 @@ function mish_screen_web {
 }
 
 function mish_screen_rdp {
+    # We relied mostly on this project for this feature:
+    # https://github.com/zer0-t/RDP-screenshotter
     filename="$(mish_screenpath)$1.rdp.jpg"
     # Check if port open
-    if nc -w1 -zv "$1" 3389 &> /dev/null; then 
+    if nc -w1 -zv "$1" 3389 &> /dev/null; then
+	export DISPLAY=:0
 	rdesktop -u "" "$1"  > /dev/null 2>&1 &
-	pid="$!"
-	sleep 5
-	# The process runs, rdesktop probably active (or trying to connect)
-	# We try to screenshot anyway before killing
-	timeout "$SCREEN_TIMEOUT" import -quiet -window "rdesktop - $1" "$filename" > /dev/null 2>&1
+	pid=$!
+	# Check if we keep the connection open and can retrieve the window id
+	while true; do
+	    kill -0 $pid 2>/dev/null
+	    if [ $? -eq 1 ]; then
+		OUTPUT "[RDP] $1 seems to have RDP open but no screenshot taken (NLA enabled?)."
+		return
+	    fi
+	    window=$(xdotool search --name "$1")
+	    if [ ! "$window" = "" ]; then
+		break
+	    fi
+	    sleep 0.1
+	done
+	# Good, screenshot time, we wait for it to load
+	sleep 2
+	import -quiet -window $window $filename
 	if [ $? -eq 00 ]; then
 	    OUTPUT "[RDP] $1 ($filename)"
-	else
-	    OUTPUT "[RDP] $1 seems to have RDP open but no screenshot taken (NLA enabled?)."
 	fi
 	kill $pid > /dev/null 2>&1
-    fi
 }
 
 function mish_screen_vnc {
