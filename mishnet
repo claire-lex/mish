@@ -31,13 +31,14 @@ ARG_USER=""
 ARG_PASSWD=""
 
 # Environment variables to use
+ENV_MISHNAME=$MISHNAME
 ENV_MISHIP=$MISHIP
 ENV_MISHIFACE=$MISHIFACE
 ENV_MISHCMD=$MISHCMD
 
 # Other internal configuration
 SCREEN_FOLDER="screens"
-SCREEN_SIZE="1366x768"
+SCREEN_SIZE="1920x1080"
 SCREEN_TIMEOUT="3s"
 
 # Messages
@@ -60,6 +61,10 @@ function OUTPUT {
 
 function ERROR {
     >&2 echo "ERROR: $*" 
+}
+
+function WARNING {
+    >&2 echo "WARNING: $*" 
 }
 
 function EXIT {
@@ -217,13 +222,17 @@ function mish_screen_web {
 	for proto in $(echo "http,https"); do
 	    filename="$(mish_screenpath)$1_$port.$proto.web.png"
 	    # Check if page exists
-	    curl --fail --silent --output /dev/null --connect-timeout 1 "$proto://$1:$port"
+	    curl --fail --silent --output /dev/null --connect-timeout 1 \
+		 -L "$proto://$1:$port"
 	    if [ $? -eq 00 ]; then
-		chromium --headless --screenshot="$filename" --window-size="$SCREEN_SIZE" "$proto://$1:$port" > /dev/null 2>&1
-		# Alternative that does not work well: firefox -p headless
-		# --no-remote --screenshot "$filename" --window-size
-		# "$SCREEN_WIDTH" "$proto://$1:$port" > /dev/null 2>&1
-		OUTPUT "[WEB] $proto://$1:$port ($filename)"
+		title=$(curl --fail --silent -L "$proto://$1:$port" |
+			grep -oP '(?<=<title>).*?(?=</title>)')
+		timeout $SCREEN_TIMEOUT firefox -p "$ENV_MISHNAME" \
+			"$proto://$1:$port" -screenshot "$filename" > /dev/null 2>&1
+		    # Previous: chromium --headless --screenshot="$filename" \
+		    # --window-size="$SCREEN_SIZE" "$proto://$1:$port" > /dev/null 2>&1
+		OUTPUT "[WEB] $proto://$1:$port - [$title]"
+		OUTPUT "      $filename"
 	    fi
 	done
     done
@@ -253,12 +262,13 @@ function mish_screen_rdp {
 	    sleep 0.1
 	done
 	# Good, screenshot time, we wait for it to load
-	sleep 2
+	sleep $SCREEN_TIMEOUT
 	import -quiet -window $window $filename
 	if [ $? -eq 00 ]; then
 	    OUTPUT "[RDP] $1 ($filename)"
 	fi
 	kill $pid > /dev/null 2>&1
+    fi
 }
 
 function mish_screen_vnc {
@@ -401,12 +411,14 @@ if [[ $ARG_COMMAND == "ping" ]]; then
 elif [[ $ARG_COMMAND == "host" ]]; then
     COMMAND=mish_host
 elif [[ $ARG_COMMAND == "screen" ]]; then
+    WARNING "The RDP screenshot feature will not work if you don't stay on the screen!"
     COMMAND=mish_screen
 elif [[ $ARG_COMMAND == "web" ]]; then
     COMMAND=mish_screen_web
 elif [[ $ARG_COMMAND == "vnc" ]]; then
     COMMAND=mish_screen_vnc
 elif [[ $ARG_COMMAND == "rdp" ]]; then
+    WARNING "The RDP screenshot feature will not work if you don't stay on the screen!"
     COMMAND=mish_screen_rdp
 elif [[ $ARG_COMMAND == "admin" ]]; then
     if [[ -z $ARG_DOMAIN || -z $ARG_USER || -z $ARG_PASSWD ]]; then
