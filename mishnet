@@ -24,7 +24,7 @@ ARG_NOFILE=false # Set to true with -n: prevents from writing results to a file.
 ARG_OUTPUTFILE="" # Change with -o [filename]
 ARG_ENGLISH=false # Set to true to use english words instead of french ones.
 # For "screen"
-ARG_PORTS="80,443,8000,8080,8888"
+ARG_PORTS="80,443,8000,8080,8443,8888"
 # For "admin"
 ARG_DOMAIN=""
 ARG_USER=""
@@ -79,10 +79,6 @@ function EXIT {
 # Catch Ctrl+c to exit properly
 trap EXIT SIGINT
 
-################################################################################
-# FUNCTIONS TO RUN ON RANGES :)                                                #
-################################################################################
-
 function help {
     echo "\
 show	Display a collection of information about the current network
@@ -107,6 +103,10 @@ These netcommands run basic network discovery commands on a range
 
 "
 }
+
+################################################################################
+# FUNCTIONS TO RUN ON RANGES :)                                                #
+################################################################################
 
 #--- Show ---------------------------------------------------------------------#
 

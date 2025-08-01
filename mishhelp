@@ -1,0 +1,143 @@
+#!/bin/bash
+# Mish helpcommand file
+# Lex @ https://github.com/claire-lex/mish - 2022-2025
+#
+# Mish: Shell environment for penetration tests.
+#
+# This file contains helpful logging and parsing functions usable when mishrc
+# is sourced.
+# These functions can be used even if mish's pentest environment is off.
+# Help: mish help
+
+################################################################################
+# CONFIG                                                                       #
+################################################################################
+
+MISH_ALIAS="mish"
+HELPCOMMAND_LIST="store"
+
+# Default values for arguments
+ARG_OUTPUTFILE=""
+ARG_NOFILE=false
+
+# Environment variables to use
+ENV_MISHNAME=$MISHNAME
+ENV_MISHIP=$MISHIP
+ENV_MISHCMD=$MISHCMD
+
+# Messages
+HELP="Usage: $MISH_ALIAS [$HELPCOMMAND_LIST] [-o outfile]"
+ERROR_COMMAND="Command not found (available: $HELPCOMMAND_LIST)."
+
+################################################################################
+# SIDE FUNCTIONS                                                               #
+################################################################################
+
+function ERROR {
+    >&2 echo "ERROR: $*" 
+}
+
+function WARNING {
+    >&2 echo "WARNING: $*" 
+}
+
+function EXIT {
+    # Wait for all threads to finish
+    wait
+    if ! $ARG_NOFILE; then
+	echo "Results are stored in: $ARG_OUTPUTFILE"
+    fi
+    exit
+}
+# Catch Ctrl+c to exit properly
+trap EXIT SIGINT
+
+function help {
+    echo "\
+store	Store command output in a file (and still print it on stdout)
+
+-o name Change the name of the output file (default: <range>.<cmd>.<date>.mish): 
+
+$HELP
+
+"
+}
+
+################################################################################
+# HELP FUNCTIONS                                                               #
+################################################################################
+
+#--- Store --------------------------------------------------------------------#
+
+function mish_store {
+    cmd="$*"
+    # Prepare filename (if not set), we don't care about -n (we want to store)
+    if [[ -z $ARG_OUTPUTFILE ]]; then
+        cmd_as_filename="${cmd//[^a-zA-Z0-9_\.]/_}"
+	ARG_OUTPUTFILE="$cmd_as_filename.$ARG_COMMAND.`date +%Y%m%d-%H%M%S`.$MISH_ALIAS"
+	# Case mish environment is enabled
+	if [[ "$ENV_MISHCMD" != "" ]]; then
+	    if [[ "$ENV_MISHIP" != "" ]]; then
+		mkdir -p "$ENV_MISHCMD/$ENV_MISHIP/"
+		ARG_OUTPUTFILE="$ENV_MISHCMD/$ENV_MISHIP/$ARG_OUTPUTFILE"
+	    else
+		ARG_OUTPUTFILE="$ENV_MISHCMD/$ARG_OUTPUTFILE"
+	    fi
+	fi
+    fi
+    # Prepare and run command
+    script -qc "$cmd" /dev/null | tee -a "$ARG_OUTPUTFILE"
+}
+
+################################################################################
+# MAIN PROGRAM                                                                 #
+################################################################################
+
+#--- Read arguments -----------------------------------------------------------#
+
+# The first argument should be the command to run on range
+if [[ $# -eq 0 ]]; then
+    ERROR "$ERROR_COMMAND"
+    exit
+fi
+
+if [[ $1 == "help" ]]; then
+    help
+    exit
+elif echo "$HELPCOMMAND_LIST" | grep -qw $1; then
+    ARG_COMMAND="$1"
+    shift
+else
+    ERROR "$ERROR_COMMAND"
+    exit
+fi
+
+# Then read the rest
+while [[ $# -gt 0 ]]; do
+    case "$1" in
+	-n|--nofile)
+	    ARG_NOFILE=true
+	    shift
+	    ;;
+	-o|--output)
+	    shift
+	    ARG_OUTPUTFILE="$1"
+	    shift
+	    ;;
+	*)
+	    break
+	    ;;
+    esac
+done
+
+#--- Prepare command to run ---------------------------------------------------#
+
+COMMAND=""
+if [[ $ARG_COMMAND == "store" ]]; then
+    COMMAND=mish_store
+fi
+
+#--- Run baby run ------------------------------------------------------------#
+
+$COMMAND $*
+EXIT

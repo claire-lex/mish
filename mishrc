@@ -16,7 +16,8 @@
 MISH_ALIAS="mish"
 COMMAND_LIST="help start status stop"
 NETCOMMAND_LIST="show list ping host printer screen web vnc rdp admin"
-HELP="Usage: $MISH_ALIAS [$COMMAND_LIST $NETCOMMAND_LIST]"
+HELPCOMMAND_LIST="store"
+HELP="Usage: $MISH_ALIAS [$COMMAND_LIST $NETCOMMAND_LIST $HELPCOMMAND_LIST]"
 
 # Variables for enabled environments (will be updated with config)
 MISH_CURRENT_PATH=""
@@ -28,6 +29,8 @@ MISH_RC_FILE="mishrc"
 MISH_RC_PATH="$MISH_DIR/$MISH_RC_FILE"
 MISH_NET_FILE="mishnet"
 MISH_NET_PATH="$MISH_DIR/$MISH_NET_FILE"
+MISH_HELP_FILE="mishhelp"
+MISH_HELP_PATH="$MISH_DIR/$MISH_HELP_FILE"
 MISH_NMAP_FILE="mishmap"
 MISH_NMAP_PATH="$MISH_DIR/$MISH_NMAP_FILE"
 
@@ -72,7 +75,7 @@ fi
 ###############################################################################
 
 # Add completion to the base command $MISH_ALIAS
-complete -W "$COMMAND_LIST $NETCOMMAND_LIST" $MISH_ALIAS
+complete -W "$COMMAND_LIST $NETCOMMAND_LIST $HELPCOMMAND_LIST" $MISH_ALIAS
 
 # Set up an alias to refer to this file with alias $MISH_ALIAS
 alias $MISH_ALIAS=$MISH_RC_PATH
@@ -97,6 +100,9 @@ stop	Disable mish environment
 
  netcommands (call to mishnet):
 $($MISH_NET_PATH help)
+
+ helpcommands (call to mishhelp):
+$($MISH_HELP_PATH help)
 "
 }
 
@@ -210,6 +216,8 @@ while [[ $# -gt 0 ]]; do
 	*)
 	    if echo "$NETCOMMAND_LIST" | grep -qw $1; then
 		$MISH_NET_PATH $*
+	    elif echo "$HELPCOMMAND_LIST" | grep -qw $1; then
+		$MISH_HELP_PATH $*
 	    else
 		ECHO "Error: Unknown argument."
 		echo "$HELP"
